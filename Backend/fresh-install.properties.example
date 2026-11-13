@@ -1,0 +1,7 @@
+# Copy to fresh-install.local.properties and edit privately. Never commit the local copy.
+# Requires a NEW empty database. The installer refuses refuge_animalier.
+# The MySQL account needs CREATE/SELECT/INSERT for setup and normal application CRUD rights.
+# These are MySQL settings, NOT the initial administrator's login password.
+db.url=jdbc:mysql://127.0.0.1:3306/refuge_animalier_fresh_demo?serverTimezone=UTC
+db.user=YOUR_DATABASE_USER
+db.password=

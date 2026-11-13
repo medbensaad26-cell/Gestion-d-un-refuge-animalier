@@ -1,0 +1,38 @@
+.animal-card-link { display:flex; flex-direction:column; height:100%; }
+.animal-card-link:focus-visible { outline-offset:-4px; border-radius:12px; }
+.animal-card:focus-within { box-shadow:0 10px 25px #2b492b14; }
+.animal-card-link .animal-card-content { display:flex; flex-direction:column; flex:1; }
+.animal-card-action { display:flex; justify-content:space-between; gap:12px; margin-top:auto; padding-top:20px; font-size:13px; font-weight:650; color:#284d3a; }
+.animal-detail { padding-block:32px 80px; min-height:65vh; }
+.detail-breadcrumb { display:flex; flex-wrap:wrap; gap:12px; font-size:13px; color:#65715d; margin-bottom:38px; }
+.detail-breadcrumb a { text-decoration:underline; text-underline-offset:4px; }
+.animal-detail h1 { margin:12px 0 30px; font-size:clamp(38px,5vw,60px); overflow-wrap:anywhere; }
+.animal-detail h1:focus { outline:none; }
+.animal-detail-grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.15fr); gap:48px; align-items:start; }
+.detail-portrait-panel { border:1px solid #e0e5d9; border-radius:16px; overflow:hidden; background:#f0f3eb; }
+.detail-portrait-panel .animal-card-visual { min-height:360px; }
+.detail-portrait-panel .animal-portrait { width:min(82%,310px); }
+.detail-portrait-panel .animal-paw { width:110px; height:110px; }
+.detail-portrait-panel>p { padding:22px 28px; font-size:14px; color:#596852; }
+.detail-profile { min-width:0; padding:8px 0; }
+.detail-profile h2 { font-size:28px; }
+.detail-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 28px; margin:20px 0; }
+.detail-facts>div { padding:16px 0; border-bottom:1px solid #e2e6db; min-width:0; }
+.detail-facts dt { font-size:12px; color:#65715d; margin-bottom:5px; }
+.detail-facts dd { margin:0; font-size:16px; font-weight:550; overflow-wrap:anywhere; white-space:pre-wrap; }
+.detail-health { grid-column:1/-1; }
+.detail-status { display:inline-flex; align-items:center; gap:8px; }
+.detail-status>span { width:7px; height:7px; border-radius:50%; background:currentColor; }
+.detail-status-note { margin:20px 0 25px; font-size:14px; color:#596852; }
+.animal-detail .feedback-panel h2 { font-size:25px; }
+.detail-return { font-size:14px; text-decoration:underline; text-underline-offset:4px; margin-top:18px; }
+@media(max-width:760px) {
+  .animal-detail { padding-block:24px 50px; }
+  .detail-breadcrumb { margin-bottom:28px; }
+  .animal-detail-grid { grid-template-columns:minmax(0,1fr); gap:25px; }
+  .detail-portrait-panel .animal-card-visual { min-height:260px; }
+  .detail-portrait-panel .animal-portrait { width:230px; }
+}
+@media(max-width:360px) {
+  .detail-facts { grid-template-columns:minmax(0,1fr); }
+}

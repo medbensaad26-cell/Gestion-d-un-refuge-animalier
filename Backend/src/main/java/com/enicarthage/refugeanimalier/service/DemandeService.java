@@ -2,6 +2,7 @@
 package com.enicarthage.refugeanimalier.service;
 
 import com.enicarthage.refugeanimalier.dao.DemandeDAO;
+import com.enicarthage.refugeanimalier.exception.RessourceIntrouvableException;
 import com.enicarthage.refugeanimalier.model.Demande;
 import com.enicarthage.refugeanimalier.model.StatutDemande;
 
@@ -35,7 +36,7 @@ public class DemandeService {
         Demande demande = demandeDAO.findById(id);
 
         if (demande == null) {
-            throw new IllegalArgumentException(
+            throw new RessourceIntrouvableException(
                     "Demande introuvable avec ID : " + id);
         }
 
@@ -56,6 +57,7 @@ public class DemandeService {
                     "Une nouvelle demande doit etre EN_ATTENTE");
         }
 
+        // The DAO resolves the sole existing administrator in the insertion transaction.
         demandeDAO.create(demande);
     }
 
@@ -75,8 +77,7 @@ public class DemandeService {
     public void supprimerDemande(long id)
             throws SQLException {
 
-        getDemandeById(id);
-
+        // Existence et historique sont verifies dans la transaction du DAO.
         demandeDAO.delete(id);
     }
 
@@ -84,22 +85,22 @@ public class DemandeService {
 
 
     // Accepter une demande d'adoption
-    public void accepterDemande(long id)
+    public void accepterDemande(long id, long adminId)
             throws SQLException {
 
-        changerStatut(id, StatutDemande.ACCEPTEE);
+        changerStatut(id, StatutDemande.ACCEPTEE, adminId);
     }
 
     // Refuser une demande d'adoption
-    public void refuserDemande(long id)
+    public void refuserDemande(long id, long adminId)
             throws SQLException {
 
-        changerStatut(id, StatutDemande.REFUSEE);
+        changerStatut(id, StatutDemande.REFUSEE, adminId);
     }
 
     // Traiter une demande avec transaction MySQL
     public void changerStatut(
-            long id, StatutDemande statut)
+            long id, StatutDemande statut, long adminId)
             throws SQLException {
 
         if (id <= 0) {
@@ -114,8 +115,12 @@ public class DemandeService {
                     "Decision invalide");
         }
 
+        if (adminId <= 0) {
+            throw new IllegalArgumentException("ID administrateur invalide");
+        }
+
         // Executer la transaction dans DemandeDAO
-        demandeDAO.traiterDemande(id, statut);
+        demandeDAO.traiterDemande(id, statut, adminId);
     }
 
 
@@ -128,31 +133,10 @@ public class DemandeService {
                     "Demande obligatoire");
         }
 
-        if (demande.getNomDemandeur() == null ||
-                demande.getNomDemandeur().isBlank()) {
-
-            throw new IllegalArgumentException(
-                    "Le nom du demandeur est obligatoire");
-        }
-
-        if (demande.getEmail() == null ||
-                demande.getEmail().isBlank()) {
-
-            throw new IllegalArgumentException(
-                    "L'email est obligatoire");
-        }
-
-        if (demande.getTelephone() == null ||
-                demande.getTelephone().isBlank()) {
-
-            throw new IllegalArgumentException(
-                    "Le telephone est obligatoire");
-        }
-
-        if (demande.getDateDemande() == null) {
-            throw new IllegalArgumentException(
-                    "La date de demande est obligatoire");
-        }
+        ValidationDonnees.texte(demande.getNomDemandeur(), "nomDemandeur", 150, true);
+        ValidationDonnees.email(demande.getEmail());
+        ValidationDonnees.texte(demande.getTelephone(), "telephone", 30, true);
+        ValidationDonnees.dateMysql(demande.getDateDemande(), "dateDemande");
 
         if (demande.getStatut() == null) {
             throw new IllegalArgumentException(
@@ -166,8 +150,7 @@ public class DemandeService {
                     "ID animal invalide");
         }
 
-        if (demande.getAdminId() != null &&
-                demande.getAdminId() <= 0) {
+        if (demande.getAdminId() != null && demande.getAdminId() <= 0) {
 
             throw new IllegalArgumentException(
                     "ID administrateur invalide");

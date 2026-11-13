@@ -6,14 +6,11 @@ import com.enicarthage.refugeanimalier.security.SessionManager;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 
@@ -76,22 +73,7 @@ public class AuthController implements HttpHandler {
     private void connexion(HttpExchange exchange)
             throws IOException, SQLException {
 
-        JsonObject json;
-
-        try (Reader reader = new InputStreamReader(
-                exchange.getRequestBody(),
-                StandardCharsets.UTF_8)) {
-
-            JsonElement element =
-                    JsonParser.parseReader(reader);
-
-            if (!element.isJsonObject()) {
-                throw new IllegalArgumentException(
-                        "Un objet JSON est attendu");
-            }
-
-            json = element.getAsJsonObject();
-        }
+        JsonObject json = JsonRequest.lireObjet(exchange);
 
         String email = lireTexte(json, "email");
         String motDePasse = lireTexte(json, "motDePasse");

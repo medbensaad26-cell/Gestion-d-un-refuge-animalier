@@ -11,6 +11,24 @@ import java.sql.SQLException;
 
 public class AdminDAO {
 
+    // Resolve the actual sole account using the request's existing JDBC transaction.
+    // No password or account identity is needed for request assignment.
+    public long findSoleAdministratorId(Connection connection) throws SQLException {
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT id FROM admin ORDER BY id LIMIT 2");
+             ResultSet result = statement.executeQuery()) {
+            if (!result.next()) {
+                throw new IllegalStateException("Aucun administrateur ne peut recevoir les demandes");
+            }
+            long id = result.getLong("id");
+            if (result.next()) {
+                throw new IllegalStateException(
+                        "Un seul compte administrateur est requis pour recevoir les demandes");
+            }
+            return id;
+        }
+    }
+
     // Rechercher un administrateur par email
     public Admin findByEmail(String email)
             throws SQLException {

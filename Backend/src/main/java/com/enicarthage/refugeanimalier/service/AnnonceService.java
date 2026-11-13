@@ -2,6 +2,7 @@
 package com.enicarthage.refugeanimalier.service;
 
 import com.enicarthage.refugeanimalier.dao.AnnonceDAO;
+import com.enicarthage.refugeanimalier.exception.RessourceIntrouvableException;
 import com.enicarthage.refugeanimalier.model.Annonce;
 
 import java.sql.SQLException;
@@ -22,19 +23,27 @@ public class AnnonceService {
         return annonceDAO.findAll();
     }
 
+    public List<Annonce> rechercherAnnonces(FiltresCatalogue filtres, boolean administrateur) throws SQLException {
+        return annonceDAO.rechercher(filtres, !administrateur);
+    }
+
     // Recuperer une annonce par ID
     public Annonce getAnnonceById(long id)
             throws SQLException {
+        return getAnnonceById(id, true);
+    }
+
+    public Annonce getAnnonceById(long id, boolean administrateur) throws SQLException {
 
         if (id <= 0) {
             throw new IllegalArgumentException(
                     "ID annonce invalide");
         }
 
-        Annonce annonce = annonceDAO.findById(id);
+        Annonce annonce = annonceDAO.findById(id, !administrateur);
 
         if (annonce == null) {
-            throw new IllegalArgumentException(
+            throw new RessourceIntrouvableException(
                     "Annonce introuvable avec ID : " + id);
         }
 
@@ -83,22 +92,10 @@ public class AnnonceService {
                     "Annonce obligatoire");
         }
 
-        if (annonce.getTitre() == null ||
-                annonce.getTitre().isBlank()) {
-            throw new IllegalArgumentException(
-                    "Le titre est obligatoire");
-        }
-
-        if (annonce.getDatePublication() == null) {
-            throw new IllegalArgumentException(
-                    "La date de publication est obligatoire");
-        }
-
-        if (annonce.getStatut() == null ||
-                annonce.getStatut().isBlank()) {
-            throw new IllegalArgumentException(
-                    "Le statut est obligatoire");
-        }
+        ValidationDonnees.texte(annonce.getTitre(), "titre", 150, true);
+        ValidationDonnees.texteLong(annonce.getDescription(), "description");
+        ValidationDonnees.texte(annonce.getStatut(), "statut", 50, true);
+        ValidationDonnees.dateMysql(annonce.getDatePublication(), "datePublication");
 
         if (annonce.getAdminId() == null ||
                 annonce.getAdminId() <= 0) {

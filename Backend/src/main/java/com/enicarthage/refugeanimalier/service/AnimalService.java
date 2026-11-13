@@ -2,6 +2,7 @@
 package com.enicarthage.refugeanimalier.service;
 
 import com.enicarthage.refugeanimalier.dao.AnimalDAO;
+import com.enicarthage.refugeanimalier.exception.RessourceIntrouvableException;
 import com.enicarthage.refugeanimalier.model.Animal;
 
 import java.sql.SQLException;
@@ -20,13 +21,19 @@ public class AnimalService {
         return animalDAO.findAll();
     }
 
+    public List<Animal> rechercherAnimaux(FiltresCatalogue filtres) throws SQLException {
+        return animalDAO.rechercher(filtres);
+    }
+
 
     public Animal getAnimalById(long id) throws SQLException {
-
+        if (id <= 0) {
+            throw new IllegalArgumentException("ID animal invalide");
+        }
         Animal animal = animalDAO.findById(id);
 
         if (animal == null) {
-            throw new IllegalArgumentException(
+            throw new RessourceIntrouvableException(
                     "Animal introuvable avec ID : " + id);
         }
 
@@ -37,68 +44,50 @@ public class AnimalService {
     // Ajouter un animal avec validation
     public void ajouterAnimal(Animal animal) throws SQLException {
 
-        if (animal == null) {
-            throw new IllegalArgumentException(
-                    "L'animal ne peut pas etre null.");
-        }
-
-        if (animal.getNom() == null ||
-                animal.getNom().isBlank()) {
-            throw new IllegalArgumentException(
-                    "Le nom de l'animal est obligatoire.");
-        }
-
-        if (animal.getAge() < 0) {
-            throw new IllegalArgumentException(
-                    "L'age ne peut pas etre negatif.");
-        }
-
-        if (animal.getAdminId() == null) {
-            throw new IllegalArgumentException(
-                    "Un administrateur est obligatoire.");
-        }
+        validerAnimal(animal);
 
         animalDAO.create(animal);
     }
 
     public void modifierAnimal(Animal animal) throws SQLException {
 
-        if (animal == null || animal.getId() == null) {
+        if (animal == null || animal.getId() == null || animal.getId() <= 0) {
             throw new IllegalArgumentException(
                     "L'animal et son ID sont obligatoires.");
         }
 
-        if (animal.getNom() == null ||
-                animal.getNom().isBlank()) {
-            throw new IllegalArgumentException(
-                    "Le nom de l'animal est obligatoire.");
-        }
+        validerAnimal(animal);
 
-        if (animal.getAge() < 0) {
-            throw new IllegalArgumentException(
-                    "L'age ne peut pas etre negatif.");
-        }
-
-        if (animal.getAdminId() == null) {
-            throw new IllegalArgumentException(
-                    "Un administrateur est obligatoire.");
-        }
-
-        // Verifier que l'animal existe
-        getAnimalById(animal.getId());
-
-        // Modifier l'animal dans MySQL
+        // Le DAO verifie l'existence et l'adoption sous le meme verrou.
         animalDAO.update(animal);
     }
 
     public void supprimerAnimal(long id) throws SQLException {
-
-        // Verifier que l'animal existe
-        getAnimalById(id);
-
-        // Supprimer l'animal dans MySQL
+        if (id <= 0) {
+            throw new IllegalArgumentException("ID animal invalide");
+        }
+        // Le DAO protege aussi l'historique sous le verrou de l'animal.
         animalDAO.delete(id);
     }
 
+
+    private void validerAnimal(Animal animal) {
+        if (animal == null) {
+            throw new IllegalArgumentException("Animal obligatoire");
+        }
+        ValidationDonnees.texte(animal.getNom(), "nom", 100, true);
+        ValidationDonnees.texte(animal.getEspece(), "espece", 100, true);
+        ValidationDonnees.texte(animal.getRace(), "race", 100, false);
+        ValidationDonnees.texte(animal.getSexe(), "sexe", 20, true);
+        ValidationDonnees.texte(animal.getEtatSante(), "etatSante", 255, false);
+        ValidationDonnees.texte(animal.getStatut(), "statut", 50, true);
+        ValidationDonnees.statutAnimal(animal.getStatut());
+        if (animal.getAge() < 0) {
+            throw new IllegalArgumentException("L'age doit etre positif ou nul");
+        }
+        if (animal.getAdminId() == null || animal.getAdminId() <= 0) {
+            throw new IllegalArgumentException("Un administrateur est obligatoire");
+        }
+    }
 
 }

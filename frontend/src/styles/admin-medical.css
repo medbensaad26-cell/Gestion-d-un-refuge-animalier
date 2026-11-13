@@ -1,0 +1,34 @@
+.medical-profile-link { display:inline-block; margin-top:18px; font-size:14px; font-weight:650; color:#35593c; text-decoration:underline; text-underline-offset:4px; }
+.medical-animal-banner { display:flex; justify-content:space-between; align-items:center; gap:24px; border:1px solid #dfe5d6; border-radius:12px; padding:23px 27px; background:#edf2e7; margin:27px 0; }
+.medical-animal-banner>div { min-width:0; }
+.medical-animal-banner h2 { font-size:29px; overflow-wrap:anywhere; }
+.medical-animal-banner p { font-size:13px; color:#596852; margin-top:8px; overflow-wrap:anywhere; }
+.medical-animal-banner>a { font-size:13px; text-decoration:underline; text-underline-offset:4px; flex-shrink:0; }
+.medical-record,.admin-medical-form { border:1px solid #dfe5d6; border-radius:12px; padding:30px; background:#fffefa; }
+.medical-record-heading { display:flex; align-items:center; justify-content:space-between; gap:22px; border-bottom:1px solid #e1e6d9; padding-bottom:24px; }
+.medical-record-heading p+p { margin-top:9px; font-size:13px; color:#596852; }
+.medical-record-sections { margin:0; }
+.medical-record-sections>div { padding-block:23px; border-bottom:1px solid #e1e6d9; }
+.medical-record-sections dt { font-size:20px; font-weight:650; }
+.medical-record-sections dd { margin:12px 0 0; color:#40563c; font-size:14px; line-height:1.9; white-space:pre-wrap; overflow-wrap:anywhere; }
+.medical-record-sections .medical-unspecified { color:#65715d; font-style:italic; }
+.medical-record>.text-button { margin-top:22px; font-size:13px; }
+.medical-fields { min-width:0; padding:0; margin:0 0 28px; border:0; display:grid; gap:23px; }
+.medical-fields legend { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.medical-fields textarea { width:100%; min-width:0; padding:11px 13px; border:1px solid #b9c6b0; border-radius:6px; background:#fff; color:#233f32; font:inherit; font-size:16px; resize:vertical; }
+.medical-fields textarea:focus-visible { outline:3px solid #d78462; outline-offset:2px; }
+.medical-fields textarea[aria-invalid=true] { border-color:#a74532; }
+.medical-date-field { max-width:280px; }
+.admin-medical-form h2 { font-size:27px; }
+.medical-form-intro { margin:16px 0 25px; font-size:14px; color:#596852; }
+.medical-feedback { display:grid; gap:15px; }
+.medical-reload { display:block; margin:20px auto 0; font-size:13px; }
+.medical-save-notice { margin-top:0; }
+@media(max-width:650px) {
+  .medical-animal-banner,.medical-record-heading { flex-direction:column; align-items:flex-start; gap:18px; }
+  .medical-animal-banner { padding:21px; }
+  .medical-animal-banner>a { flex-shrink:1; }
+  .medical-record,.admin-medical-form { padding:23px 19px; }
+  .medical-date-field { max-width:none; }
+  .admin-medical-form .button { white-space:normal; text-align:center; }
+}

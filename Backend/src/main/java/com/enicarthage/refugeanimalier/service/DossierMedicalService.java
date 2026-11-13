@@ -63,10 +63,10 @@ public class DossierMedicalService {
                     "ID animal obligatoire");
         }
 
-        if (dossier.getDateMiseAJour() == null) {
-            throw new IllegalArgumentException(
-                    "Date de mise a jour obligatoire");
-        }
+        ValidationDonnees.dateMysql(dossier.getDateMiseAJour(), "dateMiseAJour");
+        ValidationDonnees.texteLong(dossier.getVaccins(), "vaccins");
+        ValidationDonnees.texteLong(dossier.getTraitements(), "traitements");
+        ValidationDonnees.texteLong(dossier.getObservations(), "observations");
     }
 
 }

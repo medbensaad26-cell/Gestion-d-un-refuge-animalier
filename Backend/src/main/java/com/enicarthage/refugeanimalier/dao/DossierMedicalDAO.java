@@ -3,6 +3,7 @@ package com.enicarthage.refugeanimalier.dao;
 
 import com.enicarthage.refugeanimalier.config.DatabaseConnection;
 import com.enicarthage.refugeanimalier.model.DossierMedical;
+import com.enicarthage.refugeanimalier.exception.RessourceIntrouvableException;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -97,24 +98,18 @@ public class DossierMedicalDAO {
                     dossier.getDateMiseAJour()));
             statement.setLong(5, dossier.getAnimalId());
 
-            return statement.executeUpdate();
+            int lignes = statement.executeUpdate();
+            if (lignes == 0) {
+                throw new RessourceIntrouvableException("Dossier medical introuvable");
+            }
+            return lignes;
         }
     }
 
     public int deleteByAnimalId(long animalId)
             throws SQLException {
-
-        String sql = "DELETE FROM dossier_medical " +
-                "WHERE animal_id = ?";
-
-        try (Connection connection =
-                     DatabaseConnection.getConnection();
-             PreparedStatement statement =
-                     connection.prepareStatement(sql)) {
-
-            statement.setLong(1, animalId);
-            return statement.executeUpdate();
-        }
+        throw new IllegalStateException(
+                "Un animal doit conserver son dossier medical ; modifiez son contenu");
     }
 
 }

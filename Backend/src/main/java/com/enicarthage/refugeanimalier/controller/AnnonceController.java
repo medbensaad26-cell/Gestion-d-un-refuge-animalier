@@ -7,19 +7,16 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
+import com.enicarthage.refugeanimalier.exception.RessourceIntrouvableException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.enicarthage.refugeanimalier.security.AuthGuard;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDate;
-import java.util.Map;
 
 public class AnnonceController implements HttpHandler {
 
@@ -35,13 +32,18 @@ public class AnnonceController implements HttpHandler {
         String path = exchange.getRequestURI().getPath();
         String method = exchange.getRequestMethod();
 
-        if (!method.equals("GET") &&
-                !AuthGuard.exigerAdmin(exchange)) {
-            return;
+        exchange.getResponseHeaders().set("Cache-Control", "no-store");
+        exchange.getResponseHeaders().set("Vary", "Authorization");
+
+        Long adminId = null;
+        if (!method.equals("GET") || exchange.getRequestHeaders().containsKey("Authorization")) {
+            adminId = AuthGuard.obtenirAdminAuthentifie(exchange);
+            if (adminId == null) {
+                return;
+            }
         }
 
         try {
-
             // GET et POST /api/annonces
             if (path.equals(BASE)) {
 
@@ -50,7 +52,7 @@ public class AnnonceController implements HttpHandler {
                     JsonArray result = new JsonArray();
 
                     for (Annonce annonce :
-                            annonceService.getAllAnnonces()) {
+                            annonceService.rechercherAnnonces(QueryCatalogue.lire(exchange.getRequestURI()), adminId != null)) {
                         result.add(jsonAnnonce(annonce));
                     }
 
@@ -62,6 +64,7 @@ public class AnnonceController implements HttpHandler {
 
                     Annonce annonce = lireAnnonce(exchange);
                     annonce.setId(null);
+                    annonce.setAdminId(adminId);
 
                     annonceService.ajouterAnnonce(annonce);
 
@@ -105,7 +108,7 @@ public class AnnonceController implements HttpHandler {
                 Annonce existante;
 
                 try {
-                    existante = annonceService.getAnnonceById(id);
+                    existante = annonceService.getAnnonceById(id, adminId != null);
                 } catch (IllegalArgumentException e) {
                     erreur(exchange, 404, "Annonce introuvable");
                     return;
@@ -121,6 +124,7 @@ public class AnnonceController implements HttpHandler {
 
                     Annonce annonce = lireAnnonce(exchange);
                     annonce.setId(id);
+                    annonce.setAdminId(adminId);
 
                     annonceService.modifierAnnonce(annonce);
 
@@ -149,6 +153,9 @@ public class AnnonceController implements HttpHandler {
         } catch (JsonParseException e) {
             erreur(exchange, 400, "JSON invalide");
 
+        } catch (RessourceIntrouvableException e) {
+            erreur(exchange, 404, e.getMessage());
+
         } catch (IllegalArgumentException e) {
             erreur(exchange, 400, e.getMessage());
 
@@ -167,50 +174,34 @@ public class AnnonceController implements HttpHandler {
     private Annonce lireAnnonce(HttpExchange exchange)
             throws IOException {
 
-        try (Reader reader = new InputStreamReader(
-                exchange.getRequestBody(),
-                StandardCharsets.UTF_8)) {
+        JsonObject json = JsonRequest.lireObjet(exchange);
 
-            JsonElement element =
-                    JsonParser.parseReader(reader);
+        Annonce annonce = new Annonce();
 
-            if (!element.isJsonObject()) {
-                throw new IllegalArgumentException(
-                        "Un objet JSON est attendu");
-            }
+        annonce.setTitre(
+                lireTexte(json, "titre", true));
 
-            JsonObject json = element.getAsJsonObject();
+        annonce.setDescription(
+                lireTexte(json, "description", false));
 
-            Annonce annonce = new Annonce();
+        annonce.setStatut(
+                lireTexte(json, "statut", true));
 
-            annonce.setTitre(
-                    lireTexte(json, "titre", true));
+        String dateText =
+                lireTexte(json, "datePublication", true);
 
-            annonce.setDescription(
-                    lireTexte(json, "description", false));
-
-            annonce.setStatut(
-                    lireTexte(json, "statut", true));
-
-            String dateText =
-                    lireTexte(json, "datePublication", true);
-
-            try {
-                annonce.setDatePublication(
-                        LocalDate.parse(dateText));
-            } catch (java.time.format.DateTimeParseException e) {
-                throw new IllegalArgumentException(
-                        "Date invalide : utiliser AAAA-MM-JJ");
-            }
-
-            annonce.setAdminId(
-                    lireId(json, "adminId"));
-
-            annonce.setAnimalId(
-                    lireId(json, "animalId"));
-
-            return annonce;
+        try {
+            annonce.setDatePublication(
+                    LocalDate.parse(dateText));
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "Date invalide : utiliser AAAA-MM-JJ");
         }
+
+        annonce.setAnimalId(
+                lireId(json, "animalId"));
+
+        return annonce;
     }
 
     // Lire un texte JSON

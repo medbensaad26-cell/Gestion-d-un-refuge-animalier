@@ -1,0 +1,4026 @@
+{
+  "info": {
+    "_postman_id": "73968272-0594-42e8-85ff-4f1c545ecedd",
+    "name": "Gestion refuge animalier — verification isolee Step 2",
+    "description": "Collection de verification du backend Java/JDBC avec demandes publiques anonymes. Lancer en une iteration sur le sandbox MySQL jetable et HTTP loopback:18080. Aucun identifiant reel enregistre. Les lectures/decisions/suppressions de demandes restent privees. Les historiques acceptes restent dans le sandbox jusqu a sa destruction. Les identifiants et jetons sont locaux au run.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{sessionToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "const sandbox = pm.environment.get('baseUrl');",
+          "const enabled = String(pm.environment.get('allowTestWrites')) === 'true';",
+          "if (!/^http:\\/\\/(127\\.0\\.0\\.1|localhost):18080$/.test(sandbox || '') || !enabled) {",
+          "    pm.execution.skipRequest();",
+          "    throw new Error('Sandbox requis : baseUrl loopback:18080 et allowTestWrites=true. Aucune requete envoyee.');",
+          "}",
+          "pm.variables.set('baseUrl', sandbox);",
+          "if (!pm.variables.replaceIn(pm.request.url.toString()).startsWith(sandbox + '/api/')) {",
+          "    pm.execution.skipRequest();",
+          "    throw new Error('URL hors du sandbox refusee.');",
+          "}",
+          "if (pm.info.requestName !== '00 Sante et initialisation du run' && pm.variables.get('sandboxVerified') !== 'true') {",
+          "    pm.execution.skipRequest();",
+          "    pm.execution.setNextRequest(null);",
+          "    throw new Error('Marqueur du sandbox non verifie : lancer la collection depuis sa premiere requete.');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "00 Preparation",
+      "item": [
+        {
+          "name": "00 Sante et initialisation du run",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/health",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const runId = pm.variables.replaceIn('{{$guid}}');",
+                  "pm.variables.set('runId', runId);",
+                  "pm.variables.set('today', new Date().toISOString().slice(0, 10));",
+                  "['sessionToken','authenticatedAdminId','crudAnimalId','announcementId','adoptionAnimalId','acceptedRequestId','rejectedRequestId','pendingRequestId','competingRequestId','loggedOutToken','publicAnimalId','publicRequestId','publicRejectedRequestId'].forEach(key => pm.variables.unset(key));",
+                  "pm.variables.unset('sandboxVerified');"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('status attendu', function () { pm.expect(pm.response.json().status).to.eql('ok'); });",
+                  "const marker = pm.response.headers.get('X-Refuge-Test-Sandbox');",
+                  "pm.test('Serveur sandbox isole confirme', function () { pm.expect(marker).to.eql('true'); });",
+                  "if (pm.response.code === 200 && marker === 'true') {",
+                  "    pm.variables.set('sandboxVerified', 'true');",
+                  "} else {",
+                  "    pm.variables.unset('sandboxVerified');",
+                  "    pm.execution.setNextRequest(null);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "01 Mutation sans session refusee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"Non autorise\",\n  \"espece\": \"CHAT\",\n  \"race\": \"Europeen\",\n  \"age\": 2,\n  \"sexe\": \"MALE\",\n  \"etatSante\": \"BON\",\n  \"statut\": \"DISPONIBLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });",
+                  "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "01 Authentification",
+      "item": [
+        {
+          "name": "02 Connexion au sandbox",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "Le jeton reste dans pm.variables, scope local au run. Aucun identifiant reel dans le fichier exporte.",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{adminEmail}}\",\n  \"motDePasse\": \"{{adminPassword}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const email = pm.environment.get('adminEmail');",
+                  "const password = pm.environment.get('adminPassword');",
+                  "if (!email || !password) {",
+                  "    pm.execution.skipRequest();",
+                  "    pm.execution.setNextRequest(null);",
+                  "    throw new Error('Renseigner localement les identifiants du sandbox uniquement.');",
+                  "}",
+                  "pm.request.body.update(JSON.stringify({email: email, motDePasse: password}));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "",
+                  "if (pm.response.code === 200) {",
+                  "    const result = pm.response.json();",
+                  "    pm.test('Session recue', function () { pm.expect(result.token).to.be.a('string').and.not.empty; });",
+                  "    pm.test('Aucun mot de passe retourne', function () { pm.expect(result.admin).not.to.have.property('motDePasse'); });",
+                  "    pm.variables.set('sessionToken', result.token);",
+                  "    pm.variables.set('authenticatedAdminId', String(result.admin.id));",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 CRUD animal, dossier et annonce",
+      "item": [
+        {
+          "name": "03 Creer animal de CRUD",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"PM-{{runId}}-CRUD\",\n  \"espece\": \"CHAT\",\n  \"race\": \"Europeen\",\n  \"age\": 2,\n  \"sexe\": \"MALE\",\n  \"etatSante\": \"BON\",\n  \"statut\": \"DISPONIBLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "04 Retrouver animal de CRUD",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "",
+                  "const matches = pm.response.json().filter(row => row.nom === pm.variables.replaceIn('PM-{{runId}}-CRUD'));",
+                  "pm.test('Fixture de ce run retrouvee une seule fois', function () { pm.expect(matches.length).to.eql(1); });",
+                  "if (matches.length !== 1) { pm.execution.setNextRequest(null); }",
+                  "else {",
+                  "    pm.variables.set('crudAnimalId', String(matches[0].id));",
+                  "    pm.test('Administrateur issu de la session', function () { pm.expect(String(matches[0].adminId)).to.eql(String(pm.variables.get('authenticatedAdminId'))); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "05 Lire animal",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Administrateur issu de la session', function () { pm.expect(String(pm.response.json().adminId)).to.eql(String(pm.variables.get('authenticatedAdminId'))); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "06 Modifier animal",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"PM-{{runId}}-CRUD-modifie\",\n  \"espece\": \"CHAT\",\n  \"race\": \"Europeen\",\n  \"age\": 2,\n  \"sexe\": \"MALE\",\n  \"etatSante\": \"BON\",\n  \"statut\": \"EN_SOIN\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "07 Verifier modification animal",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('EN_SOIN'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "08 Verifier creation automatique du dossier medical",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}/dossier-medical",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Dossier initialise sans donnees medicales inventees', function () { const row = pm.response.json(); pm.expect(row.vaccins == null && row.traitements == null && row.observations == null).to.eql(true); pm.expect(row.dateMiseAJour).to.match(/^\\d{4}-\\d{2}-\\d{2}$/); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "09 Lire dossier medical",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}/dossier-medical",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "10 Doublon dossier refuse",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}/dossier-medical",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccins\": \"Vaccin test\",\n  \"traitements\": \"Aucun\",\n  \"observations\": \"Doublon\",\n  \"dateMiseAJour\": \"{{today}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });",
+                  "if (pm.response.code !== 409) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "11 Modifier dossier medical",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}/dossier-medical",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"vaccins\": \"Vaccin test\",\n  \"traitements\": \"Aucun\",\n  \"observations\": \"Mise a jour\",\n  \"dateMiseAJour\": \"{{today}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('observations attendu', function () { pm.expect(pm.response.json().observations).to.eql('Mise a jour'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "12 Suppression separee du dossier refusee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}/dossier-medical",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 405', function () { pm.response.to.have.status(405); });",
+                  "if (pm.response.code !== 405) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Methodes autorisees', function () { pm.expect(pm.response.headers.get('Allow')).to.eql('GET, POST, PUT'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "13 Dossier conserve apres suppression refusee",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}/dossier-medical",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Contenu medical conserve', function () { pm.expect(pm.response.json().observations).to.eql('Mise a jour'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "14 Creer annonce",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titre\": \"PM-{{runId}}-annonce\",\n  \"description\": \"Annonce de verification isolee\",\n  \"datePublication\": \"{{today}}\",\n  \"statut\": \"PUBLIEE\",\n  \"animalId\": {{crudAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "15 Retrouver annonce",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "",
+                  "const matches = pm.response.json().filter(row => row.titre === pm.variables.replaceIn('PM-{{runId}}-annonce'));",
+                  "pm.test('Fixture de ce run retrouvee une seule fois', function () { pm.expect(matches.length).to.eql(1); });",
+                  "if (matches.length !== 1) { pm.execution.setNextRequest(null); }",
+                  "else {",
+                  "    pm.variables.set('announcementId', String(matches[0].id));",
+                  "    pm.test('Administrateur issu de la session', function () { pm.expect(String(matches[0].adminId)).to.eql(String(pm.variables.get('authenticatedAdminId'))); });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "16 Lire annonce",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces/{{announcementId}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('announcementId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : announcementId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Administrateur issu de la session', function () { pm.expect(String(pm.response.json().adminId)).to.eql(String(pm.variables.get('authenticatedAdminId'))); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "17 Modifier annonce",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces/{{announcementId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titre\": \"PM-{{runId}}-annonce-modifiee\",\n  \"description\": \"Annonce de verification isolee\",\n  \"datePublication\": \"{{today}}\",\n  \"statut\": \"PUBLIEE\",\n  \"animalId\": {{crudAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }",
+                  "if (!pm.variables.get('announcementId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : announcementId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Administrateur issu de la session', function () { pm.expect(String(pm.response.json().adminId)).to.eql(String(pm.variables.get('authenticatedAdminId'))); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.01 Rechercher et filtrer animaux",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux?q=PM-{{runId}}&espece=CHAT&statutAnimal=EN_SOIN",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Animal du run filtre', function () { const rows=pm.response.json(); pm.expect(rows.length).to.eql(1); pm.expect(String(rows[0].id)).to.eql(String(pm.variables.get('crudAnimalId'))); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.02 Rechercher et filtrer annonces publiques",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces?q=PM-{{runId}}&espece=chat&statutAnimal=EN_SOIN",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Annonce publiee du run retrouvee', function () { const rows=pm.response.json(); pm.expect(rows.length).to.eql(1); pm.expect(String(rows[0].id)).to.eql(String(pm.variables.get('announcementId'))); pm.expect(rows[0].statut).to.eql('PUBLIEE'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.03 Rendre la fixture annonce non publique",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces/{{announcementId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titre\": \"PM-{{runId}}-annonce-modifiee\",\n  \"description\": \"Annonce de verification isolee\",\n  \"datePublication\": \"{{today}}\",\n  \"statut\": \"INTERNE\",\n  \"animalId\": {{crudAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.04 Recherche publique masque la fixture interne",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces?q=PM-{{runId}}",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Aucune annonce interne dans la liste publique', function () { pm.expect(pm.response.json()).to.eql([]); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.05 Detail interne public introuvable",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces/{{announcementId}}",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', function () { pm.response.to.have.status(404); });",
+                  "if (pm.response.code !== 404) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.06 Administrateur consulte le detail interne",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces/{{announcementId}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Statut interne consultable par admin', function () { pm.expect(pm.response.json().statut).to.eql('INTERNE'); pm.expect(pm.response.headers.get('Cache-Control')).to.eql('no-store'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.07 Administrateur recherche tous statuts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces?q=PM-{{runId}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Liste admin inclut la fixture interne', function () { pm.expect(pm.response.json().length).to.eql(1); pm.expect(pm.response.json()[0].statut).to.eql('INTERNE'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.08 Bearer invalide refuse sur annonces",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer invalid-test-session"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });",
+                  "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.09 Filtre statut animal invalide",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux?statutAnimal=UNKNOWN",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+                  "if (pm.response.code !== 400) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.10 Parametre ne peut pas elargir visibilite publique",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces?statut=INTERNE",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+                  "if (pm.response.code !== 400) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "S2.11 Restaurer fixture annonce publiee",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces/{{announcementId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"titre\": \"PM-{{runId}}-annonce-modifiee\",\n  \"description\": \"Annonce de verification isolee\",\n  \"datePublication\": \"{{today}}\",\n  \"statut\": \"PUBLIEE\",\n  \"animalId\": {{crudAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "['sessionToken','crudAnimalId','announcementId'].forEach(key => { if (!pm.variables.get(key)) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete depuis le debut'); } });"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "18 Suppression animal reference refusee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });",
+                  "if (pm.response.code !== 409) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "19 Supprimer annonce",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces/{{announcementId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('announcementId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : announcementId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "20 Annonce supprimee introuvable",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/annonces/{{announcementId}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('announcementId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : announcementId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', function () { pm.response.to.have.status(404); });",
+                  "if (pm.response.code !== 404) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "21 Supprimer animal de CRUD",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "22 Animal supprime introuvable",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{crudAnimalId}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('crudAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : crudAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', function () { pm.response.to.have.status(404); });",
+                  "if (pm.response.code !== 404) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 Demandes et integrite adoption",
+      "item": [
+        {
+          "name": "23 Creer animal disponible",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"PM-{{runId}}-adoption\",\n  \"espece\": \"CHAT\",\n  \"race\": \"Europeen\",\n  \"age\": 2,\n  \"sexe\": \"MALE\",\n  \"etatSante\": \"BON\",\n  \"statut\": \"DISPONIBLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "24 Retrouver animal adoption",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "",
+                  "const matches = pm.response.json().filter(row => row.nom === pm.variables.replaceIn('PM-{{runId}}-adoption'));",
+                  "pm.test('Fixture de ce run retrouvee une seule fois', function () { pm.expect(matches.length).to.eql(1); });",
+                  "if (matches.length !== 1) { pm.execution.setNextRequest(null); }",
+                  "else {",
+                  "    pm.variables.set('adoptionAnimalId', String(matches[0].id));",
+                  "    ",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "25 Creer demande A",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomDemandeur\": \"PM-{{runId}}-A\",\n  \"email\": \"postman@example.test\",\n  \"telephone\": \"0102030405\",\n  \"dateDemande\": \"{{today}}\",\n  \"statut\": \"EN_ATTENTE\",\n  \"animalId\": {{adoptionAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('adoptionAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : adoptionAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "26 Creer demande B",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomDemandeur\": \"PM-{{runId}}-B\",\n  \"email\": \"postman@example.test\",\n  \"telephone\": \"0102030405\",\n  \"dateDemande\": \"{{today}}\",\n  \"statut\": \"EN_ATTENTE\",\n  \"animalId\": {{adoptionAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('adoptionAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : adoptionAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "27 Creer demande C",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomDemandeur\": \"PM-{{runId}}-C\",\n  \"email\": \"postman@example.test\",\n  \"telephone\": \"0102030405\",\n  \"dateDemande\": \"{{today}}\",\n  \"statut\": \"EN_ATTENTE\",\n  \"animalId\": {{adoptionAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('adoptionAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : adoptionAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "28 Creer demande D",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomDemandeur\": \"PM-{{runId}}-D\",\n  \"email\": \"postman@example.test\",\n  \"telephone\": \"0102030405\",\n  \"dateDemande\": \"{{today}}\",\n  \"statut\": \"EN_ATTENTE\",\n  \"animalId\": {{adoptionAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('adoptionAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : adoptionAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "29 Retrouver demandes du run",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "{",
+                  "const matches = pm.response.json().filter(row => row.nomDemandeur === pm.variables.replaceIn('PM-{{runId}}-A'));",
+                  "pm.test('Fixture de ce run retrouvee une seule fois', function () { pm.expect(matches.length).to.eql(1); });",
+                  "if (matches.length !== 1) { pm.execution.setNextRequest(null); }",
+                  "else {",
+                  "    pm.variables.set('acceptedRequestId', String(matches[0].id));",
+                  "    pm.test('Administrateur unique trouve automatiquement', function () { pm.expect(String(matches[0].adminId)).to.eql(String(pm.environment.get('requestAdminId'))); });",
+                  "}",
+                  "}",
+                  "{",
+                  "const matches = pm.response.json().filter(row => row.nomDemandeur === pm.variables.replaceIn('PM-{{runId}}-B'));",
+                  "pm.test('Fixture de ce run retrouvee une seule fois', function () { pm.expect(matches.length).to.eql(1); });",
+                  "if (matches.length !== 1) { pm.execution.setNextRequest(null); }",
+                  "else {",
+                  "    pm.variables.set('rejectedRequestId', String(matches[0].id));",
+                  "    pm.test('Administrateur unique trouve automatiquement', function () { pm.expect(String(matches[0].adminId)).to.eql(String(pm.environment.get('requestAdminId'))); });",
+                  "}",
+                  "}",
+                  "{",
+                  "const matches = pm.response.json().filter(row => row.nomDemandeur === pm.variables.replaceIn('PM-{{runId}}-C'));",
+                  "pm.test('Fixture de ce run retrouvee une seule fois', function () { pm.expect(matches.length).to.eql(1); });",
+                  "if (matches.length !== 1) { pm.execution.setNextRequest(null); }",
+                  "else {",
+                  "    pm.variables.set('pendingRequestId', String(matches[0].id));",
+                  "    pm.test('Administrateur unique trouve automatiquement', function () { pm.expect(String(matches[0].adminId)).to.eql(String(pm.environment.get('requestAdminId'))); });",
+                  "}",
+                  "}",
+                  "{",
+                  "const matches = pm.response.json().filter(row => row.nomDemandeur === pm.variables.replaceIn('PM-{{runId}}-D'));",
+                  "pm.test('Fixture de ce run retrouvee une seule fois', function () { pm.expect(matches.length).to.eql(1); });",
+                  "if (matches.length !== 1) { pm.execution.setNextRequest(null); }",
+                  "else {",
+                  "    pm.variables.set('competingRequestId', String(matches[0].id));",
+                  "    pm.test('Administrateur unique trouve automatiquement', function () { pm.expect(String(matches[0].adminId)).to.eql(String(pm.environment.get('requestAdminId'))); });",
+                  "}",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "30 Lire demande en attente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{acceptedRequestId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('acceptedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : acceptedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('EN_ATTENTE'); });",
+                  "pm.test('Administrateur unique trouve automatiquement', function () { pm.expect(String(pm.response.json().adminId)).to.eql(String(pm.environment.get('requestAdminId'))); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "31 Modification generale demande interdite",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{acceptedRequestId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('acceptedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : acceptedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 405', function () { pm.response.to.have.status(405); });",
+                  "if (pm.response.code !== 405) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Allow exclut PUT', function () { pm.expect(pm.response.headers.get('Allow')).not.to.include('PUT'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "32 Refuser demande B",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{rejectedRequestId}}/refuser",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('rejectedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : rejectedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('REFUSEE'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "33 Verifier refus et administrateur",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{rejectedRequestId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('rejectedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : rejectedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('REFUSEE'); });",
+                  "pm.test('Administrateur issu de la session', function () { pm.expect(String(pm.response.json().adminId)).to.eql(String(pm.variables.get('authenticatedAdminId'))); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "34 Supprimer demande refusee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{rejectedRequestId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('rejectedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : rejectedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "35 Supprimer demande en attente",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{pendingRequestId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('pendingRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : pendingRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "36 Accepter demande A",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{acceptedRequestId}}/accepter",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('acceptedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : acceptedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('ACCEPTEE'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "37 Verifier historique et administrateur",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{acceptedRequestId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('acceptedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : acceptedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('ACCEPTEE'); });",
+                  "pm.test('Administrateur issu de la session', function () { pm.expect(String(pm.response.json().adminId)).to.eql(String(pm.variables.get('authenticatedAdminId'))); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "38 Verifier animal adopte",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{adoptionAnimalId}}",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('adoptionAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : adoptionAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('ADOPTE'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "39 Deuxieme approbation conflictuelle",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{competingRequestId}}/accepter",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('competingRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : competingRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });",
+                  "if (pm.response.code !== 409) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "40 Repetition approbation conflictuelle",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{acceptedRequestId}}/accepter",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('acceptedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : acceptedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });",
+                  "if (pm.response.code !== 409) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "41 Reouverture animal adopte interdite",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{adoptionAnimalId}}",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"PM-{{runId}}-adoption\",\n  \"espece\": \"CHAT\",\n  \"race\": \"Europeen\",\n  \"age\": 2,\n  \"sexe\": \"MALE\",\n  \"etatSante\": \"BON\",\n  \"statut\": \"DISPONIBLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('adoptionAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : adoptionAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });",
+                  "if (pm.response.code !== 409) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "42 Historique accepte protege",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{acceptedRequestId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('acceptedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : acceptedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });",
+                  "if (pm.response.code !== 409) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "43 Animal adopte protege",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{adoptionAnimalId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('adoptionAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : adoptionAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });",
+                  "if (pm.response.code !== 409) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "44 Refuser demande concurrente",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{competingRequestId}}/refuser",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('competingRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : competingRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "45 Supprimer demande concurrente refusee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{competingRequestId}}",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('competingRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : competingRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 Demandes publiques et confidentialite",
+      "item": [
+        {
+          "name": "46 Creer animal pour demandes publiques",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"PM-{{runId}}-public\",\n  \"espece\": \"CHAT\",\n  \"race\": \"Europeen\",\n  \"age\": 2,\n  \"sexe\": \"MALE\",\n  \"etatSante\": \"BON\",\n  \"statut\": \"DISPONIBLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "47 Retrouver animal public",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "",
+                  "const matches = pm.response.json().filter(row => row.nom === pm.variables.replaceIn('PM-{{runId}}-public'));",
+                  "pm.test('Animal public du run retrouve une seule fois', function () { pm.expect(matches.length).to.eql(1); });",
+                  "if (matches.length !== 1) { pm.execution.setNextRequest(null); }",
+                  "else { pm.variables.set('publicAnimalId', String(matches[0].id)); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "48 Deposer demande anonyme sans adminId ni statut",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomDemandeur\": \"PM-{{runId}}-public-A\",\n  \"email\": \"postman@example.test\",\n  \"telephone\": \"0102030405\",\n  \"dateDemande\": \"{{today}}\",\n  \"animalId\": {{publicAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('publicAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Reponse publique sans donnees personnelles ni attribution', function () { pm.expect(pm.response.json()).not.to.have.any.keys('nomDemandeur', 'email', 'telephone', 'adminId', 'token', 'motDePasse'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "49 Deposer demande anonyme avec attribution et statut malformes ignores",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomDemandeur\": \"PM-{{runId}}-public-B\",\n  \"email\": \"postman@example.test\",\n  \"telephone\": \"0102030405\",\n  \"dateDemande\": \"{{today}}\",\n  \"animalId\": {{publicAnimalId}},\n  \"adminId\": {\n    \"forged\": true\n  },\n  \"statut\": [\n    \"ACCEPTEE\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('publicAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 201', function () { pm.response.to.have.status(201); });",
+                  "if (pm.response.code !== 201) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Reponse publique sans donnees personnelles ni attribution', function () { pm.expect(pm.response.json()).not.to.have.any.keys('nomDemandeur', 'email', 'telephone', 'adminId', 'token', 'motDePasse'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "50 Administrateur retrouve les demandes anonymes en attente",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "",
+                  "{",
+                  "    const matches = pm.response.json().filter(row => row.nomDemandeur === pm.variables.replaceIn('PM-{{runId}}-public-A'));",
+                  "    pm.test('Demande publique A du run retrouvee', function () { pm.expect(matches.length).to.eql(1); });",
+                  "    if (matches.length !== 1) { pm.execution.setNextRequest(null); }",
+                  "    else {",
+                  "        pm.variables.set('publicRequestId', String(matches[0].id));",
+                  "        pm.test('Demande publique A imposee EN_ATTENTE', function () { pm.expect(matches[0].statut).to.eql('EN_ATTENTE'); });",
+                  "        pm.test('Demande publique A affectee au seul administrateur', function () { pm.expect(String(matches[0].adminId)).to.eql(String(pm.environment.get('requestAdminId'))); });",
+                  "    }",
+                  "}",
+                  "",
+                  "{",
+                  "    const matches = pm.response.json().filter(row => row.nomDemandeur === pm.variables.replaceIn('PM-{{runId}}-public-B'));",
+                  "    pm.test('Demande publique B du run retrouvee', function () { pm.expect(matches.length).to.eql(1); });",
+                  "    if (matches.length !== 1) { pm.execution.setNextRequest(null); }",
+                  "    else {",
+                  "        pm.variables.set('publicRejectedRequestId', String(matches[0].id));",
+                  "        pm.test('Demande publique B imposee EN_ATTENTE', function () { pm.expect(matches[0].statut).to.eql('EN_ATTENTE'); });",
+                  "        pm.test('Demande publique B affectee au seul administrateur', function () { pm.expect(String(matches[0].adminId)).to.eql(String(pm.environment.get('requestAdminId'))); });",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "51 Liste demandes interdite sans session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('publicRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });",
+                  "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Refus sans donnees personnelles', function () { pm.expect(pm.response.json()).to.have.all.keys('erreur'); pm.expect(pm.response.text()).not.to.include('postman@example.test'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "52 Detail demande interdit sans session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{publicRequestId}}",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('publicRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });",
+                  "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Refus sans donnees personnelles', function () { pm.expect(pm.response.json()).to.have.all.keys('erreur'); pm.expect(pm.response.text()).not.to.include('postman@example.test'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "53 Acceptation interdite sans session",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{publicRequestId}}/accepter",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('publicRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });",
+                  "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Refus sans donnees personnelles', function () { pm.expect(pm.response.json()).to.have.all.keys('erreur'); pm.expect(pm.response.text()).not.to.include('postman@example.test'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "54 Refus interdit sans session",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{publicRequestId}}/refuser",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('publicRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });",
+                  "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Refus sans donnees personnelles', function () { pm.expect(pm.response.json()).to.have.all.keys('erreur'); pm.expect(pm.response.text()).not.to.include('postman@example.test'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "55 Suppression interdite sans session",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{publicRequestId}}",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('publicRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });",
+                  "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Refus sans donnees personnelles', function () { pm.expect(pm.response.json()).to.have.all.keys('erreur'); pm.expect(pm.response.text()).not.to.include('postman@example.test'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "56 Demandes anonymes inchangees apres tentatives sans session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{publicRequestId}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('publicRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('EN_ATTENTE'); });",
+                  "pm.test('Administrateur unique conserve', function () { pm.expect(String(pm.response.json().adminId)).to.eql(String(pm.environment.get('requestAdminId'))); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "57 Demande anonyme incomplete invalide",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+                  "if (pm.response.code !== 400) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Reponse publique sans donnees personnelles ni attribution', function () { pm.expect(pm.response.json()).not.to.have.any.keys('nomDemandeur', 'email', 'telephone', 'adminId', 'token', 'motDePasse'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "58 Demande anonyme email invalide",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomDemandeur\": \"PM-{{runId}}-public-email-invalide\",\n  \"email\": \"adresse-invalide\",\n  \"telephone\": \"0102030405\",\n  \"dateDemande\": \"{{today}}\",\n  \"animalId\": {{publicAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('publicAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+                  "if (pm.response.code !== 400) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Reponse publique sans donnees personnelles ni attribution', function () { pm.expect(pm.response.json()).not.to.have.any.keys('nomDemandeur', 'email', 'telephone', 'adminId', 'token', 'motDePasse'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "59 Demande anonyme animal absent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomDemandeur\": \"PM-{{runId}}-public-animal-absent\",\n  \"email\": \"postman@example.test\",\n  \"telephone\": \"0102030405\",\n  \"dateDemande\": \"{{today}}\",\n  \"animalId\": 9223372036854775807\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', function () { pm.response.to.have.status(404); });",
+                  "if (pm.response.code !== 404) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Reponse publique sans donnees personnelles ni attribution', function () { pm.expect(pm.response.json()).not.to.have.any.keys('nomDemandeur', 'email', 'telephone', 'adminId', 'token', 'motDePasse'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "60 Demande anonyme animal indisponible",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nomDemandeur\": \"PM-{{runId}}-public-animal-indisponible\",\n  \"email\": \"postman@example.test\",\n  \"telephone\": \"0102030405\",\n  \"dateDemande\": \"{{today}}\",\n  \"animalId\": {{adoptionAnimalId}}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('adoptionAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : adoptionAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 409', function () { pm.response.to.have.status(409); });",
+                  "if (pm.response.code !== 409) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Reponse publique sans donnees personnelles ni attribution', function () { pm.expect(pm.response.json()).not.to.have.any.keys('nomDemandeur', 'email', 'telephone', 'adminId', 'token', 'motDePasse'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "61 Administrateur refuse demande publique B",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{publicRejectedRequestId}}/refuser"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('publicRejectedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRejectedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('REFUSEE'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "62 Verifier auteur reel du refus public",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{publicRejectedRequestId}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('publicRejectedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRejectedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('REFUSEE'); });",
+                  "pm.test('Administrateur de decision issu de la session', function () { pm.expect(String(pm.response.json().adminId)).to.eql(String(pm.variables.get('authenticatedAdminId'))); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "63 Supprimer demande publique refusee",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{publicRejectedRequestId}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('publicRejectedRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRejectedRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "64 Administrateur accepte demande publique A",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{publicRequestId}}/accepter"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('publicRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('ACCEPTEE'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "65 Verifier auteur reel de acceptation publique",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes/{{publicRequestId}}"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }",
+                  "if (!pm.variables.get('publicRequestId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicRequestId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('ACCEPTEE'); });",
+                  "pm.test('Administrateur de decision issu de la session', function () { pm.expect(String(pm.response.json().adminId)).to.eql(String(pm.variables.get('authenticatedAdminId'))); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "66 Verifier animal public adopte",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/{{publicAnimalId}}",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('publicAnimalId')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : publicAnimalId absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "pm.test('statut attendu', function () { pm.expect(pm.response.json().statut).to.eql('ADOPTE'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 Erreurs HTTP",
+      "item": [
+        {
+          "name": "67 JSON malforme",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\"nom\":",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+                  "if (pm.response.code !== 400) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "68 Validation age invalide",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"nom\": \"PM-{{runId}}-age-invalide\",\n  \"espece\": \"CHAT\",\n  \"race\": \"Europeen\",\n  \"age\": -1,\n  \"sexe\": \"MALE\",\n  \"etatSante\": \"BON\",\n  \"statut\": \"DISPONIBLE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+                  "if (pm.response.code !== 400) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "69 ID invalide",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/abc",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 400', function () { pm.response.to.have.status(400); });",
+                  "if (pm.response.code !== 400) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "70 Ressource inexistante",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux/9223372036854775807",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 404', function () { pm.response.to.have.status(404); });",
+                  "if (pm.response.code !== 404) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "71 Methode non autorisee",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/animaux",
+            "description": "",
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 405', function () { pm.response.to.have.status(405); });",
+                  "if (pm.response.code !== 405) { pm.execution.setNextRequest(null); }",
+                  "pm.test('Allow present', function () { pm.expect(pm.response.headers.get('Allow')).to.include('GET'); });"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "72 Identifiants invalides",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/login",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"inconnu@example.test\",\n  \"motDePasse\": \"test-invalide-uniquement\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });",
+                  "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "73 Demandes privees sans session",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });",
+                  "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); }"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 Deconnexion",
+      "item": [
+        {
+          "name": "74 Deconnexion et effacement jeton",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/auth/logout",
+            "description": ""
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('sessionToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : sessionToken absent.'); }"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+                  "if (pm.response.code !== 200) { pm.execution.setNextRequest(null); }",
+                  "",
+                  "pm.variables.set('loggedOutToken', pm.variables.get('sessionToken'));",
+                  "pm.variables.unset('sessionToken');"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        },
+        {
+          "name": "75 Session deconnectee rejetee",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{baseUrl}}/api/demandes",
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (!pm.variables.get('loggedOutToken')) { pm.execution.skipRequest(); throw new Error('Lancer la collection complete : loggedOutToken absent.'); }",
+                  "pm.request.headers.upsert({key:'Authorization', value:'Bearer ' + pm.variables.get('loggedOutToken')});"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('HTTP 401', function () { pm.response.to.have.status(401); });",
+                  "if (pm.response.code !== 401) { pm.execution.setNextRequest(null); }",
+                  "",
+                  "pm.variables.unset('loggedOutToken');",
+                  "pm.variables.unset('authenticatedAdminId');"
+                ]
+              }
+            }
+          ],
+          "protocolProfileBehavior": {
+            "followRedirects": false
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

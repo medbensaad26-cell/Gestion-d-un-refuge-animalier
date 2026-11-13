@@ -9,15 +9,13 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
 
+import com.enicarthage.refugeanimalier.exception.RessourceIntrouvableException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.Reader;
 import com.enicarthage.refugeanimalier.security.AuthGuard;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
@@ -39,8 +37,16 @@ public class DemandeController implements HttpHandler {
         String path = exchange.getRequestURI().getPath();
         String method = exchange.getRequestMethod();
 
-        if (!AuthGuard.exigerAdmin(exchange)) {
-            return;
+        exchange.getResponseHeaders().set("Cache-Control", "no-store");
+        exchange.getResponseHeaders().set("Vary", "Authorization");
+
+        boolean soumissionPublique = path.equals(BASE) && method.equals("POST");
+        Long adminId = null;
+        if (!soumissionPublique || exchange.getRequestHeaders().containsKey("Authorization")) {
+            adminId = AuthGuard.obtenirAdminAuthentifie(exchange);
+            if (adminId == null) {
+                return;
+            }
         }
 
         try {
@@ -65,6 +71,8 @@ public class DemandeController implements HttpHandler {
 
                     Demande demande = lireDemande(exchange);
                     demande.setId(null);
+                    // The DAO resolves the sole existing administrator, independently of the session.
+                    demande.setAdminId(null);
 
                     // Nouvelle demande en attente
                     demande.setStatut(StatutDemande.EN_ATTENTE);
@@ -79,7 +87,7 @@ public class DemandeController implements HttpHandler {
                 return;
             }
 
-            // GET, PUT et DELETE /api/demandes/{id}
+            // GET et DELETE /api/demandes/{id}; decisions via PATCH
             if (path.startsWith(BASE + "/")) {
 
                 // PATCH /api/demandes/{id}/accepter
@@ -119,9 +127,9 @@ public class DemandeController implements HttpHandler {
                     }
 
                     if (accepter) {
-                        demandeService.accepterDemande(demandeId);
+                        demandeService.accepterDemande(demandeId, adminId);
                     } else {
-                        demandeService.refuserDemande(demandeId);
+                        demandeService.refuserDemande(demandeId, adminId);
                     }
 
                     JsonObject resultat = new JsonObject();
@@ -160,12 +168,8 @@ public class DemandeController implements HttpHandler {
                     return;
                 }
 
-                if (!method.equals("GET") &&
-                        !method.equals("PUT") &&
-                        !method.equals("DELETE")) {
-
-                    methodeNonAutorisee(
-                            exchange, "GET, PUT, DELETE");
+                if (!method.equals("GET") && !method.equals("DELETE")) {
+                    methodeNonAutorisee(exchange, "GET, DELETE");
                     return;
                 }
 
@@ -183,19 +187,6 @@ public class DemandeController implements HttpHandler {
 
                     repondre(exchange, 200,
                             jsonDemande(existante));
-                    return;
-                }
-
-                if (method.equals("PUT")) {
-
-                    Demande demande = lireDemande(exchange);
-                    demande.setId(id);
-
-                    demandeService.modifierDemande(demande);
-
-                    repondre(exchange, 200,
-                            jsonDemande(
-                                    demandeService.getDemandeById(id)));
                     return;
                 }
 
@@ -217,6 +208,9 @@ public class DemandeController implements HttpHandler {
 
         } catch (JsonParseException e) {
             erreur(exchange, 400, "JSON invalide");
+
+        } catch (RessourceIntrouvableException e) {
+            erreur(exchange, 404, e.getMessage());
 
         } catch (IllegalArgumentException e) {
             erreur(exchange, 400, e.getMessage());
@@ -240,64 +234,37 @@ public class DemandeController implements HttpHandler {
     private Demande lireDemande(HttpExchange exchange)
             throws IOException {
 
-        try (Reader reader = new InputStreamReader(
-                exchange.getRequestBody(),
-                StandardCharsets.UTF_8)) {
+        JsonObject json = JsonRequest.lireObjet(exchange);
 
-            JsonElement element = JsonParser.parseReader(reader);
+        Demande demande = new Demande();
 
-            if (!element.isJsonObject()) {
-                throw new IllegalArgumentException(
-                        "Un objet JSON est attendu");
-            }
+        demande.setNomDemandeur(
+                lireTexte(json, "nomDemandeur"));
 
-            JsonObject json = element.getAsJsonObject();
-            Demande demande = new Demande();
+        demande.setEmail(
+                lireTexte(json, "email"));
 
-            demande.setNomDemandeur(
-                    lireTexte(json, "nomDemandeur"));
+        demande.setTelephone(
+                lireTexte(json, "telephone"));
 
-            demande.setEmail(
-                    lireTexte(json, "email"));
+        try {
+            demande.setDateDemande(
+                    LocalDate.parse(
+                            lireTexte(json, "dateDemande")));
 
-            demande.setTelephone(
-                    lireTexte(json, "telephone"));
-
-            try {
-                demande.setDateDemande(
-                        LocalDate.parse(
-                                lireTexte(json, "dateDemande")));
-
-            } catch (DateTimeParseException e) {
-                throw new IllegalArgumentException(
-                        "Date invalide : utiliser AAAA-MM-JJ");
-            }
-
-            String statut = lireTexte(json, "statut");
-
-            try {
-                demande.setStatut(
-                        StatutDemande.valueOf(statut));
-
-            } catch (IllegalArgumentException e) {
-                throw new IllegalArgumentException(
-                        "Statut de demande invalide");
-            }
-
-            demande.setAnimalId(
-                    lireId(json, "animalId"));
-
-            JsonElement admin = json.get("adminId");
-
-            if (admin == null || admin.isJsonNull()) {
-                demande.setAdminId(null);
-            } else {
-                demande.setAdminId(
-                        lireId(json, "adminId"));
-            }
-
-            return demande;
+        } catch (DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "Date invalide : utiliser AAAA-MM-JJ");
         }
+
+        // Les champs statut et adminId envoyes par le client sont ignores.
+        // Le statut initial appartient au serveur, l'identite a la session.
+        demande.setStatut(StatutDemande.EN_ATTENTE);
+
+        demande.setAnimalId(
+                lireId(json, "animalId"));
+
+        return demande;
     }
 
     private String lireTexte(

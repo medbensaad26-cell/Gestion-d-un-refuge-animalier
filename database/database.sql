@@ -1,20 +1,16 @@
+-- Fresh-install schema only. No database selection, credentials, accounts or sample data.
+-- Run through the guarded FreshInstallation console on an EMPTY new database.
+-- This is not a migration. Never import into an existing installation.
+-- Repeated imports fail instead of migrating. All tables are explicitly transactional.
 
-CREATE DATABASE IF NOT EXISTS refuge_animalier
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
-
-USE refuge_animalier;
-
-
-
-CREATE TABLE IF NOT EXISTS admin (
+CREATE TABLE admin (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     email VARCHAR(255) NOT NULL UNIQUE,
     mot_de_passe VARCHAR(255) NOT NULL
-);
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS animal (
+CREATE TABLE animal (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     nom VARCHAR(100) NOT NULL,
     espece VARCHAR(100) NOT NULL,
@@ -28,10 +24,10 @@ CREATE TABLE IF NOT EXISTS animal (
     CONSTRAINT fk_animal_admin
     FOREIGN KEY (admin_id)
     REFERENCES admin(id)
-);
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 
-CREATE TABLE IF NOT EXISTS dossier_medical (
+CREATE TABLE dossier_medical (
                                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                                vaccins TEXT,
                                                traitements TEXT,
@@ -43,10 +39,10 @@ CREATE TABLE IF NOT EXISTS dossier_medical (
                                                FOREIGN KEY (animal_id)
     REFERENCES animal(id)
     ON DELETE CASCADE
-    );
+    ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 
-CREATE TABLE IF NOT EXISTS annonce (
+CREATE TABLE annonce (
                                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                        titre VARCHAR(150) NOT NULL,
     description TEXT,
@@ -62,11 +58,11 @@ CREATE TABLE IF NOT EXISTS annonce (
     CONSTRAINT fk_annonce_animal
     FOREIGN KEY (animal_id)
     REFERENCES animal(id)
-    );
+    ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 
 
-CREATE TABLE IF NOT EXISTS demande (
+CREATE TABLE demande (
                                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                        nom_demandeur VARCHAR(150) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -84,84 +80,4 @@ CREATE TABLE IF NOT EXISTS demande (
     CONSTRAINT fk_demande_admin
     FOREIGN KEY (admin_id)
     REFERENCES admin(id)
-    );
-
-
-INSERT INTO admin (nom, email, mot_de_passe)
-VALUES (
-           'Administrateur Test',
-           'admin.test@example.com',
-           'COMPTE_TEST_NON_ACTIF'
-       );
-
-
-INSERT INTO animal
-(nom, espece, race, age, sexe, etat_sante, statut, admin_id)
-VALUES
-    ('Rex', 'Chien', 'Berger Allemand', 3, 'Male',
-     'Bonne sante', 'DISPONIBLE', 1),
-
-    ('Mimi', 'Chat', 'Europeen', 2, 'Femelle',
-     'Bonne sante', 'DISPONIBLE', 1),
-
-    ('Luna', 'Chien', 'Labrador', 1, 'Femelle',
-     'En traitement', 'EN_SOIN', 1);
-
-
-
-
-
-INSERT INTO dossier_medical
-(vaccins, traitements, observations, date_mise_a_jour, animal_id)
-VALUES
-    ('Rage, DHPP', 'Vermifuge',
-     'Rex est en bonne sante', '2026-11-07', 1),
-
-    ('Typhus, Coryza', 'Antiparasitaire',
-     'Mimi est en bonne sante', '2026-11-07', 2),
-
-    ('Rage', 'Traitement antibiotique',
-     'Luna est sous surveillance', '2026-11-07', 3);
-
-
-
-
-
-INSERT INTO annonce
-(titre, description, date_publication, statut, admin_id, animal_id)
-VALUES
-    ('Adoptez Rex',
-     'Rex est un chien affectueux de 3 ans.',
-     '2026-11-07', 'PUBLIEE', 1, 1),
-
-    ('Adoptez Mimi',
-     'Mimi est une chatte calme de 2 ans.',
-     '2026-11-07', 'PUBLIEE', 1, 2);
-
-
-
-INSERT INTO demande
-(nom_demandeur, email, telephone, date_demande,
- statut, animal_id, admin_id)
-VALUES
-    ('Sarra Ben Ali', 'sarra@example.com', '20123456',
-     '2026-11-07', 'EN_ATTENTE', 1, 1),
-
-    ('Youssef Trabelsi', 'youssef@example.com', '55123456',
-     '2026-11-07', 'EN_ATTENTE', 2, 1);
-
-
-
--- Requetes de verification
-
-SELECT * FROM animal;
-
-
-SELECT id, nom, espece, age, statut
-FROM animal
-WHERE statut = 'DISPONIBLE';
-
-
-SELECT id, nom_demandeur, statut
-FROM demande
-WHERE statut = 'EN_ATTENTE';
+    ) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

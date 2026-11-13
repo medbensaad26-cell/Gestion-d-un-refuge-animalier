@@ -16,6 +16,14 @@ public final class AuthGuard {
     public static boolean exigerAdmin(HttpExchange exchange)
             throws IOException {
 
+        return obtenirAdminAuthentifie(exchange) != null;
+    }
+
+    // Retourner l'identite issue de la session, jamais du corps JSON.
+    // En cas d'echec, la reponse 401 est deja envoyee.
+    public static Long obtenirAdminAuthentifie(HttpExchange exchange)
+            throws IOException {
+
         String authorization = exchange.getRequestHeaders()
                 .getFirst("Authorization");
 
@@ -27,7 +35,7 @@ public final class AuthGuard {
             Long adminId = SessionManager.verifierSession(token);
 
             if (adminId != null) {
-                return true;
+                return adminId;
             }
         }
 
@@ -58,6 +66,6 @@ public final class AuthGuard {
             output.write(data);
         }
 
-        return false;
+        return null;
     }
 }

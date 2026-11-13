@@ -8,14 +8,12 @@ import com.enicarthage.refugeanimalier.service.AnimalService;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
+import com.enicarthage.refugeanimalier.exception.RessourceIntrouvableException;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.enicarthage.refugeanimalier.security.AuthGuard;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.io.OutputStream;
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
@@ -49,20 +47,28 @@ public class AnimalController implements HttpHandler {
                 path.startsWith(BASE + "/") &&
                         path.contains("/dossier-medical");
 
-        if ((dossierMedical || !method.equals("GET")) &&
-                !AuthGuard.exigerAdmin(exchange)) {
-            return;
+        if (dossierMedical) {
+            exchange.getResponseHeaders().set("Cache-Control", "no-store");
+            exchange.getResponseHeaders().set("Vary", "Authorization");
+        }
+
+        Long adminId = null;
+        if (dossierMedical || !method.equals("GET")) {
+            adminId = AuthGuard.obtenirAdminAuthentifie(exchange);
+            if (adminId == null) {
+                return;
+            }
         }
 
         try {
             if (path.equals(BASE)) {
                 switch (method) {
                     case "GET" ->
-                            repondre(exchange, 200, listerAnimaux());
+                            repondre(exchange, 200, animalService.rechercherAnimaux(QueryCatalogue.lire(exchange.getRequestURI())));
 
                     case "POST" -> {
                         Animal animal = lireAnimal(exchange);
-                        validerAnimal(animal);
+                        animal.setAdminId(adminId);
                         animal.setId(null);
 
                         animalService.ajouterAnimal(animal);
@@ -103,10 +109,9 @@ public class AnimalController implements HttpHandler {
 
                 if (!method.equals("GET") &&
                         !method.equals("POST") &&
-                        !method.equals("PUT") &&
-                        !method.equals("DELETE")) {
+                        !method.equals("PUT")) {
                     methodeNonAutorisee(
-                            exchange, "GET, POST, PUT, DELETE");
+                            exchange, "GET, POST, PUT");
                     return;
                 }
 
@@ -168,13 +173,6 @@ public class AnimalController implements HttpHandler {
                     return;
                 }
 
-                if (method.equals("DELETE")) {
-                    dossierMedicalService.supprimerDossier(animalId);
-
-                    repondre(exchange, 200,
-                            Map.of("message", "Dossier medical supprime"));
-                    return;
-                }
             }
 
 
@@ -216,7 +214,7 @@ public class AnimalController implements HttpHandler {
 
                     case "PUT" -> {
                         Animal animal = lireAnimal(exchange);
-                        validerAnimal(animal);
+                        animal.setAdminId(adminId);
                         animal.setId(id);
 
                         animalService.modifierAnimal(animal);
@@ -248,8 +246,14 @@ public class AnimalController implements HttpHandler {
         } catch (JsonParseException e) {
             erreur(exchange, 400, "JSON invalide");
 
+        } catch (RessourceIntrouvableException e) {
+            erreur(exchange, 404, e.getMessage());
+
         } catch (IllegalArgumentException e) {
             erreur(exchange, 400, e.getMessage());
+
+        } catch (IllegalStateException e) {
+            erreur(exchange, 409, e.getMessage());
 
         } catch (SQLIntegrityConstraintViolationException e) {
             erreur(exchange, 409,
@@ -261,70 +265,29 @@ public class AnimalController implements HttpHandler {
         }
     }
 
-    private Animal lireAnimal(HttpExchange exchange)
-            throws IOException {
+    private Animal lireAnimal(HttpExchange exchange) throws IOException {
+        JsonObject json = JsonRequest.lireObjet(exchange);
+        Animal animal = new Animal();
+        animal.setNom(texteJson(json, "nom"));
+        animal.setEspece(texteJson(json, "espece"));
+        animal.setRace(texteJson(json, "race"));
+        animal.setSexe(texteJson(json, "sexe"));
+        animal.setEtatSante(texteJson(json, "etatSante"));
+        animal.setStatut(texteJson(json, "statut"));
 
-        try (Reader reader = new InputStreamReader(
-                exchange.getRequestBody(),
-                StandardCharsets.UTF_8)) {
-
-            JsonElement json = JsonParser.parseReader(reader);
-
-            if (!json.isJsonObject()) {
-                throw new IllegalArgumentException(
-                        "Un objet JSON est attendu");
-            }
-
-            return gson.fromJson(json, Animal.class);
+        JsonElement age = json.get("age");
+        if (age == null || !age.isJsonPrimitive()
+                || !age.getAsJsonPrimitive().isNumber()
+                || !age.getAsString().matches("[0-9]+")) {
+            throw new IllegalArgumentException("age entier positif ou nul obligatoire");
         }
-    }
-
-    private void validerAnimal(Animal animal) {
-        if (animal == null) {
-            throw new IllegalArgumentException(
-                    "Animal obligatoire");
+        try {
+            animal.setAge(Integer.parseInt(age.getAsString()));
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("age entier invalide");
         }
-
-        texteObligatoire(animal.getNom(), "nom", 100);
-        texteObligatoire(animal.getEspece(), "espece", 100);
-        texteObligatoire(animal.getSexe(), "sexe", 20);
-        texteObligatoire(animal.getStatut(), "statut", 50);
-
-        if (animal.getRace() != null &&
-                animal.getRace().length() > 100) {
-            throw new IllegalArgumentException(
-                    "race trop longue");
-        }
-
-        if (animal.getEtatSante() != null &&
-                animal.getEtatSante().length() > 255) {
-            throw new IllegalArgumentException(
-                    "etatSante trop long");
-        }
-
-        if (animal.getAge() < 0) {
-            throw new IllegalArgumentException(
-                    "L'age doit etre positif ou nul");
-        }
-
-        if (animal.getAdminId() == null ||
-                animal.getAdminId() <= 0) {
-            throw new IllegalArgumentException(
-                    "adminId valide obligatoire");
-        }
-    }
-
-    private void texteObligatoire(
-            String valeur, String champ, int longueurMax) {
-
-        if (valeur == null ||
-                valeur.isBlank() ||
-                valeur.length() > longueurMax) {
-            throw new IllegalArgumentException(
-                    "Champ " + champ +
-                            " obligatoire (max " +
-                            longueurMax + " caracteres)");
-        }
+        // id and adminId from JSON are deliberately ignored.
+        return animal;
     }
 
     private void methodeNonAutorisee(
@@ -366,48 +329,36 @@ public class AnimalController implements HttpHandler {
             HttpExchange exchange, long animalId)
             throws IOException {
 
-        try (Reader reader = new InputStreamReader(
-                exchange.getRequestBody(),
-                StandardCharsets.UTF_8)) {
+        JsonObject json = JsonRequest.lireObjet(exchange);
 
-            JsonElement element = JsonParser.parseReader(reader);
+        String dateText = texteJson(
+                json, "dateMiseAJour");
 
-            if (!element.isJsonObject()) {
-                throw new IllegalArgumentException(
-                        "Un objet JSON est attendu");
-            }
-
-            JsonObject json = element.getAsJsonObject();
-
-            String dateText = texteJson(
-                    json, "dateMiseAJour");
-
-            if (dateText == null) {
-                throw new IllegalArgumentException(
-                        "dateMiseAJour obligatoire");
-            }
-
-            java.time.LocalDate date;
-
-            try {
-                date = java.time.LocalDate.parse(dateText);
-            } catch (java.time.format.DateTimeParseException e) {
-                throw new IllegalArgumentException(
-                        "Date invalide : utiliser AAAA-MM-JJ");
-            }
-
-            DossierMedical dossier = new DossierMedical();
-
-            dossier.setAnimalId(animalId);
-            dossier.setVaccins(texteJson(json, "vaccins"));
-            dossier.setTraitements(
-                    texteJson(json, "traitements"));
-            dossier.setObservations(
-                    texteJson(json, "observations"));
-            dossier.setDateMiseAJour(date);
-
-            return dossier;
+        if (dateText == null) {
+            throw new IllegalArgumentException(
+                    "dateMiseAJour obligatoire");
         }
+
+        java.time.LocalDate date;
+
+        try {
+            date = java.time.LocalDate.parse(dateText);
+        } catch (java.time.format.DateTimeParseException e) {
+            throw new IllegalArgumentException(
+                    "Date invalide : utiliser AAAA-MM-JJ");
+        }
+
+        DossierMedical dossier = new DossierMedical();
+
+        dossier.setAnimalId(animalId);
+        dossier.setVaccins(texteJson(json, "vaccins"));
+        dossier.setTraitements(
+                texteJson(json, "traitements"));
+        dossier.setObservations(
+                texteJson(json, "observations"));
+        dossier.setDateMiseAJour(date);
+
+        return dossier;
     }
 
     private String texteJson(JsonObject json, String champ) {

@@ -1,0 +1,42 @@
+.request-filter { max-width:320px; margin:30px 0 23px; }
+.request-result-count { margin-bottom:23px; color:#596852; font-size:13px; }
+.admin-request-list { padding:0; margin:0; list-style:none; display:grid; gap:20px; }
+.admin-request-card { display:flex; align-items:center; justify-content:space-between; gap:25px; padding:27px; border:1px solid #dfe5d6; border-radius:12px; background:#fffefa; }
+.request-card-body { min-width:0; }
+.request-meta { display:flex; flex-wrap:wrap; align-items:center; gap:15px; color:#65715d; font-size:12px; }
+.request-status { display:inline-block; border-radius:5px; padding:5px 11px; background:#f3eadf; color:#7b5539; font-size:12px; font-weight:650; }
+.request-status-ACCEPTEE { background:#e6efde; color:#405e36; }
+.request-status-REFUSEE { background:#f3e6e0; color:#8a4e3b; }
+.request-card-body h2 { font-size:28px; margin:15px 0 11px; overflow-wrap:anywhere; }
+.request-card-body>p { color:#596852; font-size:14px; overflow-wrap:anywhere; }
+.admin-request-card>.button { flex-shrink:0; }
+.request-detail-date { font-size:13px; color:#65715d; margin-bottom:15px; }
+.request-applicant,.request-decision { padding:29px; margin-top:27px; border:1px solid #dfe5d6; border-radius:12px; background:#fffefa; }
+.request-applicant h2,.request-decision h2 { font-size:27px; }
+.request-applicant dl { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:25px; margin:24px 0 0; }
+.request-applicant dt { font-size:12px; font-weight:650; color:#65715d; margin-bottom:9px; }
+.request-applicant dd { margin:0; font-size:14px; overflow-wrap:anywhere; }
+.request-animal { display:flex; align-items:center; justify-content:space-between; gap:23px; padding:25px 29px; margin-top:25px; background:#edf2e7; border:1px solid #dfe5d6; border-radius:12px; }
+.request-animal>div { min-width:0; }
+.request-animal h2 { font-size:29px; margin:12px 0 8px; overflow-wrap:anywhere; }
+.request-animal p:not(.eyebrow) { font-size:13px; color:#596852; }
+.request-animal>a { font-size:13px; text-decoration:underline; text-underline-offset:4px; flex-shrink:0; }
+.request-decision>p { margin:17px 0 24px; font-size:14px; color:#596852; }
+.request-confirmation { padding:23px; background:#f7f1e8; border:1px solid #d9c6b4; border-radius:10px; }
+.request-confirmation h3 { font-size:24px; }
+.request-confirmation p { margin:16px 0; font-size:14px; overflow-wrap:anywhere; }
+.request-confirmation .adoption-actions { margin-top:23px; }
+.request-feedback { display:grid; gap:16px; margin-top:23px; }
+.request-feedback>.button { justify-self:start; }
+.request-refresh { margin-top:22px; font-size:13px; }
+@media(max-width:720px) {
+  .admin-request-card { flex-direction:column; align-items:flex-start; }
+  .request-applicant dl { grid-template-columns:minmax(0,1fr); gap:20px; }
+  .request-animal { flex-direction:column; align-items:flex-start; }
+  .request-animal>a { flex-shrink:1; }
+}
+@media(max-width:650px) {
+  .admin-request-card,.request-applicant,.request-decision,.request-animal { padding:23px 20px; }
+  .request-confirmation { padding:19px; }
+  .request-detail .button { white-space:normal; text-align:center; }
+}

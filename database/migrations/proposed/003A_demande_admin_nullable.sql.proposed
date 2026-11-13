@@ -1,0 +1,10 @@
+-- HISTORICAL PROPOSAL COPY. Approved for source / isolated tests on 2026-11-08.
+-- Superseded by ../003A_demande_admin_nullable.sql and docs/phase-3a-migration.md.
+-- This historical copy is not loaded by the application/tests; do not execute it.
+-- Based on database/database.sql: admin_id is signed BIGINT NOT NULL.
+-- Keep existing values, indexes and fk_demande_admin; no data backfill or fake ID.
+-- No USE statement: target database selection must be separately reviewed.
+-- MySQL ALTER TABLE implicitly commits and may rebuild/lock the table.
+
+ALTER TABLE demande
+    MODIFY COLUMN admin_id BIGINT NULL DEFAULT NULL;

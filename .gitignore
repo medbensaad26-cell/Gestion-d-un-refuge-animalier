@@ -43,3 +43,9 @@ refuge_animalier.sql
 
 # Postman local files
 .postman/
+
+# React / Vite frontend dependencies and generated output
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+frontend/coverage/

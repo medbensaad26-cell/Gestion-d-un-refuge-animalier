@@ -1,0 +1,49 @@
+.admin-nav { display:flex; flex-wrap:wrap; gap:28px; padding-block:18px; border-bottom:1px solid #e0e5d7; font-size:14px; }
+.admin-nav a { padding:5px 0; color:#65715d; }
+.admin-nav a.active { color:#284d3a; font-weight:700; border-bottom:2px solid #536e45; }
+.animal-save-notice { margin:25px 0 0; }
+.animal-results-heading { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:15px; margin:26px 0 18px; font-size:14px; color:#596852; }
+.text-button { border:0; background:transparent; font:inherit; color:#35593c; text-decoration:underline; text-underline-offset:4px; cursor:pointer; padding:5px 0; }
+.admin-animal-list { padding:0; margin:0; list-style:none; display:grid; gap:18px; }
+.admin-animal-card { display:flex; align-items:center; justify-content:space-between; gap:24px; padding:25px 28px; border:1px solid #dfe5d6; border-radius:12px; background:#fffefa; }
+.admin-animal-info { min-width:0; overflow-wrap:anywhere; }
+.animal-record-id { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:#65715d; }
+.admin-animal-card h2 { font-size:29px; margin:7px 0 10px; }
+.admin-animal-info>p:not(.animal-record-id) { color:#596852; font-size:14px; margin-top:5px; }
+.admin-animal-status { display:inline-block; border-radius:5px; padding:5px 10px; font-size:12px; margin-top:14px; background:#edf2e7; color:#45603a; }
+.status-care { background:#f4eadf; color:#7f5337; }
+.status-adopted { background:#e8efec; color:#365f53; }
+.status-unknown { background:#eeebe8; color:#655d55; }
+.admin-animal-actions { display:flex; align-items:center; flex-wrap:wrap; gap:20px; flex-shrink:0; font-size:13px; }
+.admin-animal-actions>a:not(.button) { text-decoration:underline; text-underline-offset:4px; }
+.delete-link { color:#914734; }
+.preserved-history { font-size:12px; color:#65715d; }
+.admin-back-link { display:inline-block; margin-bottom:28px; font-size:13px; text-decoration:underline; text-underline-offset:4px; }
+.animal-editor { max-width:850px; margin-inline:auto; }
+.animal-editor-title { font-size:clamp(32px,4.5vw,46px); margin:15px 0 23px; overflow-wrap:anywhere; }
+.animal-editor-intro { font-size:14px; color:#596852; line-height:1.85; }
+.admin-animal-form,.admin-delete-panel { padding:30px; border:1px solid #dfe5d6; border-radius:12px; background:#fffefa; margin-top:25px; }
+.animal-form-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:23px; padding:0; margin:0; min-width:0; border:0; }
+.animal-form-grid legend { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+.animal-health-field { grid-column:1/-1; }
+.animal-form-grid select,.animal-form-grid textarea { width:100%; min-height:49px; min-width:0; padding:11px 13px; border:1px solid #b9c6b0; border-radius:6px; background:#fff; color:#233f32; font:inherit; font-size:16px; }
+.animal-form-grid textarea { resize:vertical; }
+.animal-form-grid select:focus-visible,.animal-form-grid textarea:focus-visible { outline:3px solid #d78462; outline-offset:2px; }
+.animal-form-grid [aria-invalid=true] { border-color:#a74532; }
+.animal-field-hint { font-size:12px; color:#596852; }
+.animal-form-grid:disabled { opacity:.75; }
+.admin-animal-form .admin-error,.admin-delete-panel .admin-error { display:grid; gap:15px; }
+.admin-error .button,.admin-error>a { justify-self:start; }
+.admin-error>a { text-decoration:underline; text-underline-offset:4px; }
+.admin-delete-panel>h2 { overflow-wrap:anywhere; font-size:30px; margin-bottom:12px; }
+.admin-delete-panel>p { overflow-wrap:anywhere; font-size:14px; color:#596852; }
+.button-danger { background:#914734; color:#fffefa; border:1px solid #914734; }
+.button:disabled { opacity:.65; cursor:wait; }
+@media(max-width:950px) { .admin-animal-actions { flex-shrink:1; justify-content:flex-end; max-width:290px; } }
+@media(max-width:650px) {
+  .admin-animal-card { align-items:stretch; flex-direction:column; padding:22px; }
+  .admin-animal-actions { justify-content:flex-start; max-width:none; gap:16px; }
+  .animal-form-grid { grid-template-columns:minmax(0,1fr); gap:20px; }
+  .admin-animal-form,.admin-delete-panel { padding:23px 19px; }
+  .admin-animal-form .adoption-actions .button,.admin-delete-panel .adoption-actions .button { white-space:normal; text-align:center; }
+}

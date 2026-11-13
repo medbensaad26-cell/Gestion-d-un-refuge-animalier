@@ -9,19 +9,30 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import com.enicarthage.refugeanimalier.controller.AuthController;
+import com.enicarthage.refugeanimalier.controller.DashboardController;
 public class Router {
 
     public static void start() throws IOException {
 
-        HttpServer server = HttpServer.create(
-                new InetSocketAddress("localhost", 8080), 0);
+        HttpServer server = creerServeur(new InetSocketAddress("localhost", 8080));
+        server.start();
+        System.out.println("Serveur HTTP demarre sur http://localhost:8080");
+    }
+
+    // Permet aux tests d'utiliser les vraies routes sur leur propre port.
+    public static HttpServer creerServeur(InetSocketAddress adresse) throws IOException {
+        HttpServer server = HttpServer.create(adresse, 0);
 
         server.createContext("/api/health", exchange -> {
 
+            if (!exchange.getRequestURI().getPath().equals("/api/health")) {
+                erreur(exchange, 404, "Route introuvable");
+                return;
+            }
+
             if (!exchange.getRequestMethod().equals("GET")) {
                 exchange.getResponseHeaders().set("Allow", "GET");
-                exchange.sendResponseHeaders(405, -1);
-                exchange.close();
+                erreur(exchange, 405, "Methode non autorisee");
                 return;
             }
 
@@ -62,9 +73,19 @@ public class Router {
                 new AuthController()
         );
 
-        server.start();
+        server.createContext("/", exchange -> erreur(exchange, 404, "Route introuvable"));
+        server.createContext("/api/admin/dashboard", new DashboardController());
 
-        System.out.println(
-                "Serveur HTTP demarre sur http://localhost:8080");
+        return server;
+    }
+
+    private static void erreur(com.sun.net.httpserver.HttpExchange exchange, int statut, String message)
+            throws IOException {
+        byte[] data = ("{\"erreur\":\"" + message + "\"}").getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+        exchange.sendResponseHeaders(statut, data.length);
+        try (OutputStream output = exchange.getResponseBody()) {
+            output.write(data);
+        }
     }
 }
