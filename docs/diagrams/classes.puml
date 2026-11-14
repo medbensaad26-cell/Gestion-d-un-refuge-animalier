@@ -1,0 +1,78 @@
+@startuml
+!include theme.puml
+title Gestion d'un refuge animalier | Classes du domaine
+top to bottom direction
+
+class Admin {
+  - id : Long
+  - nom : String
+  - email : String
+  - motDePasse : String
+}
+class Animal {
+  - id : Long
+  - nom : String
+  - espece : String
+  - race : String
+  - age : int
+  - sexe : String
+  - etatSante : String
+  - statut : String
+  - adminId : Long
+}
+class DossierMedical {
+  - id : Long
+  - vaccins : String
+  - traitements : String
+  - observations : String
+  - dateMiseAJour : LocalDate
+  - animalId : Long
+}
+class Annonce {
+  - id : Long
+  - titre : String
+  - description : String
+  - datePublication : LocalDate
+  - statut : String
+  - adminId : Long
+  - animalId : Long
+}
+class Demande {
+  - id : Long
+  - nomDemandeur : String
+  - email : String
+  - telephone : String
+  - dateDemande : LocalDate
+  - statut : StatutDemande
+  - animalId : Long
+  - adminId : Long
+}
+enum StatutDemande <<enumeration>> {
+  EN_ATTENTE
+  ACCEPTEE
+  REFUSEE
+}
+
+Admin "1" -- "0..*" Animal : gère
+Admin "1" -- "0..*" Annonce : publie
+Admin "1" -- "0..*" Demande : reçoit / traite
+Animal "1" -- "1" DossierMedical : possède (cycle Java)
+Animal "1" -- "0..*" Annonce : concerne
+Animal "1" -- "0..*" Demande : fait l'objet de
+Demande ..> StatutDemande : type du statut
+
+note left of Admin
+  motDePasse contient un hash BCrypt.
+  Aucun mot de passe ni hash réel représenté.
+end note
+note bottom of DossierMedical
+  Java crée animal + dossier dans une transaction.
+  Suppression indépendante du dossier interdite.
+  SQL seul garantit 0..1 dossier : voir diagramme ER.
+end note
+legend bottom
+  Attributs privés réels du package model ; constructeurs et accesseurs omis.
+  Les champs *Id matérialisent les associations JDBC (pas de références objet imbriquées).
+  Dates : java.time.LocalDate. Aucune classe Visiteur persistée, ni héritage métier.
+endlegend
+@enduml

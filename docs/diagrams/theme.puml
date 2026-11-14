@@ -1,0 +1,25 @@
+' Shared presentation only; no application configuration.
+!pragma layout smetana
+skinparam backgroundColor #FFFFFF
+skinparam defaultFontName Arial
+skinparam defaultFontSize 15
+skinparam shadowing false
+skinparam roundcorner 8
+skinparam ArrowColor #526575
+skinparam ArrowThickness 1.3
+skinparam classAttributeIconSize 0
+skinparam classBackgroundColor #F5FAFC
+skinparam classBorderColor #27566B
+skinparam classHeaderBackgroundColor #DCECF2
+skinparam classFontColor #173B4D
+skinparam packageBackgroundColor #F7FAFC
+skinparam packageBorderColor #9BB3BF
+skinparam usecaseBackgroundColor #EDF6F5
+skinparam usecaseBorderColor #29746C
+skinparam actorBorderColor #27566B
+skinparam noteBackgroundColor #FFF9E8
+skinparam noteBorderColor #BEA454
+skinparam noteFontSize 13
+skinparam nodesep 50
+skinparam ranksep 65
+hide circle

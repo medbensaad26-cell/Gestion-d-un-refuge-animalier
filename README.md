@@ -2,13 +2,19 @@
 
 Java/JDBC backend using Maven, MySQL, Gson and the built-in Java HTTP server, with a React + Vite frontend in JavaScript.
 
+**Final documentation, 14 November 2026:** start with the [deliverables index](docs/README.md), [project architecture and functionality](docs/project-overview.md), [editable UML/ER diagrams and printable PDF](docs/diagrams/README.md), and [professor requirements with remaining packaging questions](docs/university-requirements.md). Phase 5 changes documentation only; no database access, application changes or Git commit.
+
 **Installing from scratch:** follow the [professor's fresh-installation guide](docs/fresh-installation.md). The shipped SQL is now schema-only with explicit InnoDB tables. A guarded console installer creates the first BCrypt administrator in a new empty `refuge_animalier_fresh_*` database, using private password prompts and an explicit private config. It refuses the existing `refuge_animalier` database and never resets an account. No SQL import/migration is needed for the existing installation.
 
 **Fresh-install verification, 13 November 2026:** **244 backend tests and 213 frontend tests passed, with zero failures/skips; frontend build/lint passed.** This includes 31 new setup checks, canonical packaged schema validation, provisioning on disposable MySQL, actual HTTP authentication/dashboard/logout and first animal/medical creation. No connection to the existing database was opened. See the [verification report and limits](docs/fresh-installation-verification.md).
 
 **Live verification update, 13 November 2026:** the user confirmed actual React/Java/JDBC/MySQL login/logout, protected pages, dashboard and consultation, public submission/validation, request 6 refused, request 5 accepted and animal 11 adopted. The Step 11 results below are the earlier 8 November snapshot; their real-login limitation was subsequently closed by that manual verification.
 
-Step 11 final verification is complete: the PDF's public and administrator use cases, five domain classes and relationships are covered. **213 frontend tests and 213 isolated Maven tests passed; build/lint, the production-bundle browser journey and 16 mobile routes passed.** Live read-only checks passed and all five real domain tables, including administrator credentials, stayed unchanged. The existing account's real browser login remains untested because its password is unknown; isolated Java/MySQL login and fixture browser login passed separately. See the [final verification report](docs/step-11-final-verification.md).
+## Implementation history (dated results)
+
+The following steps record their verification at the time. Current installation and test results are above; historical migration instructions are not fresh-install commands.
+
+Step 11 verification on 8 November covered the PDF's public and administrator use cases, five domain classes and relationships. **213 frontend tests and 213 isolated Maven tests passed; build/lint, the production-bundle browser journey and 16 mobile routes passed.** Its then-pending real-account browser login was subsequently confirmed by the user on 13 November. See the [dated verification report](docs/step-11-final-verification.md).
 
 Step 10 is complete: protected adoption-request list/details at `/admin/demandes`, applicant review and explicit acceptance/refusal confirmation. Requests and animal availability are rechecked before decisions; adoption history and atomic backend rules are preserved. **213 frontend tests and 212 isolated Maven tests passed; build/lint and desktop/mobile checks passed.** Real requests, animals and administrator credentials are unchanged. See the [Step 10 report](docs/step-10-admin-adoption-decisions.md).
 
@@ -34,13 +40,13 @@ Phase 3B verification: frontend build passed, 18 API-service tests passed, and t
 
 ## Frontend
 
-The `frontend` application provides public animal browsing/details, announcements with search/filters and adoption requests, plus administrator login, a protected dashboard with counts, animal management, medical records, announcement publication and adoption-request decisions. Steps 1–11 are complete; the final verification scope and remaining manual login check are recorded in the report above.
+The `frontend` application provides public animal browsing/details, announcements with search/filters and adoption requests, plus administrator login, a protected dashboard with counts, animal management, medical records, announcement publication and adoption-request decisions. Steps 1–11 are complete; current evidence and its limits are indexed in the [final documentation](docs/README.md).
 
 Keep the existing Java backend running at `http://localhost:8080`. From the repository root, open another terminal and run:
 
 ```sh
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 

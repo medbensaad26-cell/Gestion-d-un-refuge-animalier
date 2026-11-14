@@ -1,0 +1,58 @@
+@startuml
+!include theme.puml
+title Gestion d'un refuge animalier | Cas d'utilisation
+left to right direction
+skinparam nodesep 30
+skinparam ranksep 55
+actor "Visiteur\n(espace public)" as Visitor
+actor "Administrateur" as Administrator
+
+rectangle "Système : application web du refuge" {
+  package "Espace public - sans compte" {
+    usecase "Consulter les animaux" as BrowseAnimals
+    usecase "Voir les détails\nd'un animal" as AnimalDetails
+    usecase "Consulter les annonces" as BrowseAnnouncements
+    usecase "Rechercher les annonces" as SearchAnnouncements
+    usecase "Filtrer les annonces" as FilterAnnouncements
+    usecase "Envoyer une demande\nd'adoption" as SubmitRequest
+  }
+  package "Espace administrateur" {
+    usecase "S'authentifier" as Login
+    usecase "Se déconnecter" as Logout
+    usecase "Consulter le dashboard" as Dashboard
+    usecase "Gérer les animaux\najouter, modifier, supprimer,\nrechercher, consulter" as ManageAnimals
+    usecase "Gérer le dossier médical\nconsulter, modifier" as ManageMedical
+    usecase "Publier une annonce\ncréer, modifier, publier, retirer" as PublishAnnouncement
+    usecase "Gérer les demandes\nconsulter liste et détails" as ManageRequests
+    usecase "Accepter une demande" as AcceptRequest
+    usecase "Refuser une demande" as RefuseRequest
+  }
+}
+Visitor -- BrowseAnimals
+Visitor -- BrowseAnnouncements
+Visitor -- SubmitRequest
+AnimalDetails .left.> BrowseAnimals : <<extend>>
+SearchAnnouncements .up.> BrowseAnnouncements : <<extend>>
+FilterAnnouncements .up.> BrowseAnnouncements : <<extend>>
+BrowseAnimals -[hidden]right-> Login
+
+Login -- Administrator
+Logout -- Administrator
+Dashboard -- Administrator
+ManageAnimals -- Administrator
+ManageMedical -- Administrator
+PublishAnnouncement -- Administrator
+ManageRequests -- Administrator
+AcceptRequest ..> ManageRequests : <<extend>>
+RefuseRequest ..> ManageRequests : <<extend>>
+
+legend bottom
+  Les cas de gestion et la déconnexion exigent une session valide ; la connexion est une précondition,
+  pas une authentification à répéter à chaque action. Le visiteur ne possède pas de compte.
+  Extensions : détail depuis le catalogue ; recherche/filtre facultatifs ; décision après consultation.
+  Annonces publiques : PUBLIEE uniquement. Nouvelle demande : EN_ATTENTE, affectée au seul admin existant.
+  Accepter : demande EN_ATTENTE et animal disponible -> ACCEPTEE + ADOPTE (transaction). Refuser : animal inchangé.
+  Médical : création explicite si dossier absent, pas de suppression indépendante. Animaux : historique protégé.
+  Publier / retirer : PUBLIEE / INTERNE ; aucun écran de suppression d'annonce.
+endlegend
+@enduml

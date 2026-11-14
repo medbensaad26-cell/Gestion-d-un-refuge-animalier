@@ -1,8 +1,12 @@
 # Frontend — Gestion d'un refuge animalier
 
+**Documentation finale, 14 novembre 2026** : [index des livrables](../docs/README.md), [architecture et fonctionnalités](../docs/project-overview.md), [diagrammes UML/ER](../docs/diagrams/README.md). Dernier bilan applicatif du 13 novembre : **213 tests frontend, 244 backend, build et lint réussis** ; ces tests ne sont pas relancés pendant la Phase 5 documentaire.
+
 **Installation neuve** : suivre le [guide professeur](../docs/fresh-installation.md) pour créer un schéma InnoDB vide et un administrateur BCrypt via saisie privée, puis lancer Java avec sa configuration dédiée. Aucune donnée de démonstration ni mot de passe n'est embarqué. Installer le frontend avec `npm ci`, puis `npm run dev`. Le 13 novembre 2026, l'utilisateur a également confirmé le parcours réel de connexion/déconnexion et de demande/décision d'adoption ; les rapports Step 11 ci-dessous restent des preuves historiques du 8 novembre.
 
-**Step 11 terminé** : correspondance finale avec les classes, relations et cas d'utilisation du PDF vérifiée. **213 tests frontend et 213 tests Maven isolés** réussis ; build/lint, parcours navigateur du bundle de production et 16 routes à 320 px réussis. Les cinq tables réelles, y compris les identifiants administrateur, sont inchangées. La connexion navigateur au compte réel reste à vérifier avec son mot de passe existant ; connexion Java/MySQL isolée et connexion navigateur sur fixtures vérifiées séparément. Voir le [rapport final](../docs/step-11-final-verification.md).
+## Historique des étapes
+
+Les résultats suivants sont datés ; ils ne remplacent pas le bilan actuel ci-dessus. **Step 11, 8 novembre** : classes, relations et cas d'utilisation vérifiés ; **213 tests frontend et 213 Maven isolés**, build/lint, parcours du bundle et 16 routes mobiles réussis. La connexion réelle encore en attente à cette date a depuis été confirmée par l'utilisateur le 13 novembre. Voir le [rapport historique](../docs/step-11-final-verification.md).
 
 **Step 10 terminé** : consultation des demandes `/admin/demandes`, coordonnées en détail et confirmation d'acceptation/refus. Relecture de la demande et de l'animal avant décision, historique conservé et conflits gérés sans relance automatique. **213 tests frontend et 212 tests Maven isolés** réussis, ainsi que build/lint et parcours desktop/mobile. Les vraies demandes, animaux et identifiants restent inchangés. Voir le [rapport Step 10](../docs/step-10-admin-adoption-decisions.md).
 
@@ -20,7 +24,7 @@
 
 **Historique Step 3** : les cartes ouvrent `/animaux/{id}` avec tous les champs du profil, chargement, erreur avec réessai, animal introuvable et retour à la liste. Build, lint et **34 tests** réussis ; parcours desktop/mobile vérifiés. Voir le [rapport Step 3](../docs/step-3-animal-browsing.md).
 
-React + Vite en JavaScript, avec React Router. Le frontend utilise le backend Java existant pour le catalogue, les annonces, les demandes publiques, la connexion/dashboard administrateur, la gestion des animaux, leurs dossiers médicaux, les publications et les décisions d'adoption. Les étapes 1 à 11 sont terminées ; le rapport final précise les vérifications effectuées et la connexion réelle restant à essayer manuellement.
+React + Vite en JavaScript, avec React Router. Le frontend utilise le backend Java existant pour le catalogue, les annonces, les demandes publiques, la connexion/dashboard administrateur, la gestion des animaux, leurs dossiers médicaux, les publications et les décisions d'adoption. Les étapes 1 à 11 sont terminées ; les preuves actuelles et leurs limites figurent dans l'[index final](../docs/README.md).
 
 ## Démarrer
 
@@ -28,7 +32,7 @@ Conserver le backend Java sur `http://localhost:8080`. Depuis la racine du proje
 
 ```sh
 cd frontend
-npm install
+npm ci
 npm run dev
 ```
 

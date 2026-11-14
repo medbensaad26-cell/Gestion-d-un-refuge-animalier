@@ -1,5 +1,7 @@
 # Step 11 — Vérification finale
 
+> **Rapport historique du 8 novembre.** Mise à jour de contexte au 14 novembre : l'utilisateur a confirmé le 13 novembre le parcours réel de connexion/déconnexion et d'adoption. Le [bilan d'installation neuve](fresh-installation-verification.md) porte les derniers résultats automatisés : 244 tests backend, 213 frontend, build/lint réussis. Les limites et comptes ci-dessous décrivent leur date d'exécution ; ils ne constituent pas les blocages actuels. Les livrables UML/ER sont maintenant dans l'[index final](README.md).
+
 Date : 8 novembre 2026. Référence : `Projet_Java_Refuge_Animalier_Final_Modifie_Selon_Photos.pdf`, notamment diagrammes de classes et de cas d'utilisation.
 
 Les cas d'utilisation des deux acteurs et les relations métier du PDF sont implémentés. Aucun manque fonctionnel n'a été identifié pendant cette vérification. Aucune correction du code applicatif n'a été nécessaire à cette étape : un test d'acceptation transversal et la documentation finale ont été ajoutés.

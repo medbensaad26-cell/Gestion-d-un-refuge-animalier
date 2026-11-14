@@ -1,0 +1,80 @@
+@startuml
+!include theme.puml
+title Gestion d'un refuge animalier | Modèle relationnel MySQL
+top to bottom direction
+
+entity "admin" as admin {
+  * id : BIGINT <<PK, AI>>
+  --
+  * nom : VARCHAR(100)
+  * email : VARCHAR(255) <<UQ>>
+  * mot_de_passe : VARCHAR(255)
+}
+entity "animal" as animal {
+  * id : BIGINT <<PK, AI>>
+  --
+  * nom : VARCHAR(100)
+  * espece : VARCHAR(100)
+  race : VARCHAR(100)
+  * age : INT
+  * sexe : VARCHAR(20)
+  etat_sante : VARCHAR(255)
+  * statut : VARCHAR(50)
+  * admin_id : BIGINT <<FK>>
+}
+entity "dossier_medical" as dossier_medical {
+  * id : BIGINT <<PK, AI>>
+  --
+  vaccins : TEXT
+  traitements : TEXT
+  observations : TEXT
+  date_mise_a_jour : DATE
+  * animal_id : BIGINT <<FK, UQ>>
+}
+entity "annonce" as annonce {
+  * id : BIGINT <<PK, AI>>
+  --
+  * titre : VARCHAR(150)
+  description : TEXT
+  * date_publication : DATE
+  * statut : VARCHAR(50)
+  * admin_id : BIGINT <<FK>>
+  * animal_id : BIGINT <<FK>>
+}
+entity "demande" as demande {
+  * id : BIGINT <<PK, AI>>
+  --
+  * nom_demandeur : VARCHAR(150)
+  * email : VARCHAR(255)
+  telephone : VARCHAR(30)
+  * date_demande : DATE
+  * statut : ENUM('EN_ATTENTE', 'ACCEPTEE', 'REFUSEE')
+  * animal_id : BIGINT <<FK>>
+  * admin_id : BIGINT <<FK>>
+}
+
+admin ||--o{ animal : admin_id
+admin ||--o{ annonce : admin_id
+admin ||--o{ demande : admin_id
+animal ||--o| dossier_medical : animal_id UNIQUE
+animal ||--o{ annonce : animal_id
+animal ||--o{ demande : animal_id
+
+note bottom of dossier_medical
+  Seule cascade SQL : animal -> dossier_medical
+  ON DELETE CASCADE ; autres FK : restriction.
+  SQL : 0..1 dossier ; Java impose exactement 1.
+end note
+note bottom of demande
+  statut : DEFAULT 'EN_ATTENTE'.
+  telephone nullable en SQL, requis par l'API.
+  Aucune contrainte SQL « une acceptation par animal » :
+  règle assurée par transactions et verrous Java.
+end note
+legend bottom
+  Source : database/database.sql | 5 tables InnoDB | utf8mb4_unicode_ci | 5 PK, 6 FK, 2 UQ hors PK
+  * = NOT NULL (PK comprise) ; sans * = nullable ; AI = AUTO_INCREMENT ; UQ = UNIQUE.
+  Chaque enfant a un parent obligatoire. Une patte d'oie signifie plusieurs ; cercle = zéro possible.
+  La date médicale est nullable en SQL, obligatoire lors d'une écriture par l'API.
+endlegend
+@enduml
