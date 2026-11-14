@@ -10,6 +10,7 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 import com.enicarthage.refugeanimalier.controller.AuthController;
 import com.enicarthage.refugeanimalier.controller.DashboardController;
+import com.enicarthage.refugeanimalier.controller.MatchingController;
 public class Router {
 
     public static void start() throws IOException {
@@ -59,6 +60,7 @@ public class Router {
         );
 
         server.createContext("/api/annonces", new AnnonceController());
+        server.createContext("/api/matching", new MatchingController());
 
 
 

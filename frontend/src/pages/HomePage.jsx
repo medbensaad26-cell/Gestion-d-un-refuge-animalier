@@ -46,6 +46,11 @@ export default function HomePage() {
         </div>
       </section>
 
+      <section className="matching-teaser container" aria-labelledby="matching-teaser-title">
+        <div><p className="eyebrow">Une rencontre qui vous ressemble</p><h2 id="matching-teaser-title">Par où commencer ? Par vous.</h2><p>Trois préférences pour découvrir les animaux disponibles du refuge.</p></div>
+        <Link className="button button-primary" to="/trouver-compagnon">Trouvez votre compagnon idéal <span aria-hidden="true">↗</span></Link>
+      </section>
+
       <section className="animals-section container" id="animaux" aria-labelledby="animals-title">
         <div className="section-heading">
           <div><p className="eyebrow">Les petits visages du refuge</p><h2 id="animals-title">Faisons connaissance.</h2></div>

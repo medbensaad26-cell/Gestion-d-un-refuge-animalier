@@ -29,6 +29,7 @@ export default function SiteLayout() {
             <Link to="/#animaux" className={hash === '#animaux' || pathname.startsWith('/animaux/') ? 'nav-link active' : 'nav-link'} aria-current={pathname.startsWith('/animaux/') || hash === '#animaux' ? 'location' : undefined}>Les animaux</Link>
             <Link to="/#refuge" className={hash === '#refuge' ? 'nav-link active' : 'nav-link'}>Notre refuge</Link>
             <Link to="/annonces" className={pathname === '/annonces' ? 'nav-link active' : 'nav-link'} aria-current={pathname === '/annonces' ? 'page' : undefined}>Annonces</Link>
+            <Link to="/trouver-compagnon" className={pathname === '/trouver-compagnon' ? 'nav-link active' : 'nav-link'} aria-current={pathname === '/trouver-compagnon' ? 'page' : undefined}>Trouver un compagnon</Link>
           </nav>
         </div>
       </header>

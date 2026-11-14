@@ -17,6 +17,7 @@ import AdminAnnouncementsPage from './pages/AdminAnnouncementsPage.jsx'
 import AdminAnnouncementEditorPage from './pages/AdminAnnouncementEditorPage.jsx'
 import AdminRequestsPage from './pages/AdminRequestsPage.jsx'
 import AdminRequestDetailPage from './pages/AdminRequestDetailPage.jsx'
+import MatchingPage from './pages/MatchingPage.jsx'
 
 export default function App() {
   return (
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="animaux/:id" element={<AnimalDetailPage />} />
         <Route path="animaux/:id/demande-adoption" element={<AdoptionRequestPage />} />
         <Route path="annonces" element={<AnnouncementsPage />} />
+        <Route path="trouver-compagnon" element={<MatchingPage />} />
         <Route path="admin/connexion" element={<AdminLoginPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
