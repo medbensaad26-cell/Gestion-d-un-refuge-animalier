@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Navigate } from 'react-router'
 import { useAdminSession } from '../context/AdminSessionContext.js'
 import PawIcon from '../components/PawIcon.jsx'
+import ShelterPhoto from '../components/ShelterPhoto.jsx'
 
 export default function AdminLoginPage() {
   const { session, notice, signIn } = useAdminSession()
@@ -18,7 +19,7 @@ export default function AdminLoginPage() {
   useEffect(() => {
     active.current = true
     const original = document.title
-    document.title = 'Connexion administrateur · Le Refuge'
+    document.title = 'Connexion administrateur · Pawtale'
     return () => { active.current = false; request.current?.abort(); document.title = original }
   }, [])
   useEffect(() => { if (error) errorPanel.current?.focus() }, [error])
@@ -41,7 +42,7 @@ export default function AdminLoginPage() {
   }
 
   if (session) return <Navigate to="/admin" replace />
-  return <section className="admin-login container" aria-labelledby="admin-login-title">
+  return <section className="admin-login container" aria-labelledby="admin-login-title"><div className="login-story"><ShelterPhoto name="friends" priority /><div><PawIcon /><h2>Prendre soin.<br /><em>Chaque jour.</em></h2><p>Un espace pour accompagner<br />les histoires du refuge.</p></div><span>Photographie illustrative</span></div><div className="login-form-content">
     <div className="admin-login-mark"><PawIcon /></div><p className="eyebrow">Espace administrateur</p>
     <h1 id="admin-login-title">Bienvenue au refuge.</h1><p className="admin-login-intro">Connectez-vous avec le compte administrateur du refuge pour accéder à votre tableau de bord.</p>
     {notice && <p className="admin-notice" role="status">{notice}</p>}
@@ -54,5 +55,5 @@ export default function AdminLoginPage() {
       <button className="button button-primary admin-signin" type="submit" disabled={busy}>{busy ? 'Connexion…' : 'Se connecter'}</button>
       {busy && <p className="admin-login-progress" role="status">Vérification de vos identifiants.</p>}
     </form>
-  </section>
+  </div></section>
 }

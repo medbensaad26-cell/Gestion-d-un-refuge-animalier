@@ -1,16 +1,16 @@
 import { Link } from 'react-router'
 import AnimalPortrait from './AnimalPortrait.jsx'
 import { ageLabel, sexLabel, getAnimalStatus } from '../utils/animalLabels.js'
+import { tiltCard, resetCard } from '../utils/cardMotion.js'
 
 export default function AnimalCard({ animal, index }) {
   const status = getAnimalStatus(animal.statut)
   return (
-    <article className={`animal-card tone-${index % 3}`} aria-labelledby={`animal-${animal.id}`}>
+    <article className={`animal-card tone-${index % 3}`} aria-labelledby={`animal-${animal.id}`} onPointerMove={tiltCard} onPointerLeave={resetCard}>
       <Link className="animal-card-link" to={`/animaux/${animal.id}`} aria-label={`Voir la fiche de ${animal.nom}`}>
         <div className="animal-card-visual">
           <span className={`status-badge status-${status.className}`}><span aria-hidden="true" />{status.cardLabel}</span>
-          <AnimalPortrait species={animal.espece} />
-          <span className="illustration-label">Illustration</span>
+          <AnimalPortrait species={animal.espece} variant={animal.id} imageUrl={animal.imageUrl} name={animal.nom} />
         </div>
         <div className="animal-card-content">
           <p className="animal-species">{animal.espece}{animal.race ? ` · ${animal.race}` : ''}</p>

@@ -1,4 +1,5 @@
 import { AdminSessionExpiredError } from './adminAuth.js'
+import { animalImageUrl } from './animals.js'
 // Animals and announcements use the same validated backend catalogue criteria.
 import { announcementQuery as animalQuery, normalizeAnnouncementFilters as normalizeAnimalFilters, filtersFromSearchParams as animalFiltersFromSearchParams } from './announcements.js'
 export { animalQuery, normalizeAnimalFilters, animalFiltersFromSearchParams }
@@ -28,7 +29,8 @@ export function validateAnimal(input = {}, { originalStatus = null } = {}) {
 
 function animalRecord(item) {
   if (!item || !validAnimalId(item.id) || typeof item.id !== 'number' || typeof item.nom !== 'string' || !item.nom.trim() || typeof item.espece !== 'string' || !item.espece.trim() || !Number.isInteger(item.age) || item.age < 0 || item.age > 2147483647 || !['race', 'sexe', 'etatSante', 'statut'].every(key => item[key] == null || typeof item[key] === 'string')) throw new AdminAnimalError('invalid', 'La fiche de l’animal n’a pas pu être chargée.')
-  return { id: item.id, nom: item.nom, espece: item.espece, race: item.race ?? null, age: item.age, sexe: item.sexe ?? null, etatSante: item.etatSante ?? null, statut: item.statut ?? null }
+  const imageUrl = animalImageUrl(item)
+  return { id: item.id, nom: item.nom, espece: item.espece, race: item.race ?? null, age: item.age, sexe: item.sexe ?? null, etatSante: item.etatSante ?? null, statut: item.statut ?? null, ...(imageUrl ? { imageUrl } : {}) }
 }
 
 async function request(token, path, { method = 'GET', body, signal, fetchImpl = globalThis.fetch } = {}) {
@@ -47,7 +49,13 @@ async function request(token, path, { method = 'GET', body, signal, fetchImpl = 
   if (response.status === 409) throw new AdminAnimalError('conflict', method === 'DELETE' ? 'Suppression impossible : un animal adopté ou lié à des annonces ou demandes doit être conservé.' : 'La situation de l’animal empêche cette opération. Rechargez sa fiche ; une adoption doit être confirmée depuis les demandes.')
   const expected = method === 'POST' ? 201 : 200
   if (response.status !== expected) throw new AdminAnimalError(writing ? 'uncertain' : 'server', writing ? 'L’opération n’a pas pu être confirmée. Vérifiez la liste des animaux avant de réessayer.' : 'Les animaux sont momentanément indisponibles. Veuillez réessayer.')
-  if (writing) return { success: true }
+  if (writing) {
+    if (method !== 'POST') return { success: true }
+    // The new ID lets a photo be attached; the creation is already confirmed without it.
+    let created = null
+    try { created = await response.json() } catch (error) { if (error?.name === 'AbortError') throw error }
+    return typeof created?.id === 'number' && validAnimalId(created.id) ? { success: true, id: created.id } : { success: true }
+  }
   try { return await response.json() } catch (error) {
     if (error?.name === 'AbortError') throw error
     throw new AdminAnimalError('invalid', 'Les informations des animaux n’ont pas pu être chargées.')
@@ -73,6 +81,44 @@ export async function saveAdminAnimal(token, id, input, { originalStatus, ...opt
   const { values, errors } = validateAnimal(input, { originalStatus })
   if (Object.keys(errors).length) throw new AdminAnimalError('validation', 'Vérifiez les informations de l’animal.', errors)
   return request(token, id == null ? '/api/animaux' : `/api/animaux/${id}`, { ...options, method: id == null ? 'POST' : 'PUT', body: values })
+}
+
+export const ANIMAL_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
+export const ANIMAL_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+
+export function validateAnimalImage(file) {
+  if (!ANIMAL_IMAGE_TYPES.includes(file?.type)) return 'Choisissez une image JPEG, PNG ou WebP.'
+  if (file.size === 0) return 'Ce fichier est vide.'
+  if (file.size > ANIMAL_IMAGE_MAX_BYTES) return 'Cette image dépasse 5 Mo.'
+  return ''
+}
+
+async function imageRequest(token, id, method, file, { signal, fetchImpl = globalThis.fetch } = {}) {
+  if (typeof token !== 'string' || !/^[A-Za-z0-9_-]{32,512}$/.test(token)) throw new AdminSessionExpiredError()
+  if (!validAnimalId(id)) throw new AdminAnimalError('notFound', 'Cet animal est introuvable.')
+  let response
+  try {
+    response = await fetchImpl(`/api/animaux/${id}/image`, { method, headers: { Accept: 'application/json', Authorization: `Bearer ${token}`, ...(file ? { 'Content-Type': file.type } : {}) }, credentials: 'omit', cache: 'no-store', signal, ...(file ? { body: file } : {}) })
+  } catch (error) {
+    if (error?.name === 'AbortError') throw error
+    throw new AdminAnimalError('uncertain', 'La photo n’a pas pu être confirmée.')
+  }
+  if (response.status === 401) throw new AdminSessionExpiredError()
+  if (response.status === 404) throw new AdminAnimalError('notFound', 'Cet animal est introuvable ou a été supprimé.')
+  if (response.status === 413) throw new AdminAnimalError('validation', 'Cette image dépasse 5 Mo.')
+  if (response.status === 400 || response.status === 415) throw new AdminAnimalError('validation', 'Ce fichier n’est pas une image JPEG, PNG ou WebP valide.')
+  if (response.status !== 200) throw new AdminAnimalError('uncertain', 'La photo n’a pas pu être confirmée.')
+  return { success: true }
+}
+
+export async function uploadAnimalImage(token, id, file, options) {
+  const problem = validateAnimalImage(file)
+  if (problem) throw new AdminAnimalError('validation', problem)
+  return imageRequest(token, id, 'PUT', file, options)
+}
+
+export function deleteAnimalImage(token, id, options) {
+  return imageRequest(token, id, 'DELETE', null, options)
 }
 
 export async function deleteAdminAnimal(token, id, options) {

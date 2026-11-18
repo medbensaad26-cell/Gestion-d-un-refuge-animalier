@@ -6,6 +6,18 @@
 
 ## Historique des étapes
 
+**Refonte premium, 16 novembre 2026** : branche `feature/premium-frontend-redesign`,
+créée depuis le checkpoint propre `feature/smart-adoption-matching` (`d32756a`).
+Accueil, catalogue, matching, fiches, annonces, adoption et administration partagent
+désormais un thème vert forêt / ivoire, des photos illustratives Pexels optimisées
+et des polices locales. Voir le [rapport de refonte](REDESIGN.md) pour les fichiers,
+les crédits, les vérifications et leurs limites. Aucun changement de service,
+de contrat API, de session, de backend ou de base ; aucune nouvelle dépendance.
+
+Tests navigateur supplémentaires : `npm run test:redesign-ui` (bundle de
+production, réponses simulées uniquement). Les captures marquées « données
+simulées » sont produites dans `e2e/artifacts/redesign/`, exclu de Git.
+
 Les résultats suivants sont datés ; ils ne remplacent pas le bilan actuel ci-dessus. **Step 11, 8 novembre** : classes, relations et cas d'utilisation vérifiés ; **213 tests frontend et 213 Maven isolés**, build/lint, parcours du bundle et 16 routes mobiles réussis. La connexion réelle encore en attente à cette date a depuis été confirmée par l'utilisateur le 13 novembre. Voir le [rapport historique](../docs/step-11-final-verification.md).
 
 **Step 10 terminé** : consultation des demandes `/admin/demandes`, coordonnées en détail et confirmation d'acceptation/refus. Relecture de la demande et de l'animal avant décision, historique conservé et conflits gérés sans relance automatique. **213 tests frontend et 212 tests Maven isolés** réussis, ainsi que build/lint et parcours desktop/mobile. Les vraies demandes, animaux et identifiants restent inchangés. Voir le [rapport Step 10](../docs/step-10-admin-adoption-decisions.md).
@@ -73,7 +85,7 @@ Le service médical privé utilise GET/PUT `/api/animaux/{id}/dossier-medical` e
 - `src/styles` : styles responsive.
 - `src/App.jsx`, `src/main.jsx` : routes et initialisation React.
 
-La liste ne contient pas de faux animaux : les noms et caractéristiques viennent de l'API. Le modèle backend n'a pas de champ photo ; les visuels décoratifs ne sont pas présentés comme des photographies réelles. Si Java est arrêté ou renvoie une erreur, un message permet de réessayer.
+La liste ne contient pas de faux animaux : les noms et caractéristiques viennent de l'API. Le modèle backend n'a pas de champ photo ; les photographies de stock sont identifiées comme illustratives et ne représentent pas les animaux enregistrés. Les crédits et licences figurent dans `public/images/CREDITS.md` et dans le pied de page. Si Java est arrêté ou renvoie une erreur, un message permet de réessayer.
 
 Consulter le [README principal](../README.md) et le [bilan Phase 3B](../docs/phase-3b-verification.md) pour les résultats et les limites de vérification.
 

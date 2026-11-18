@@ -85,6 +85,7 @@ Phase 3A public submission was approved on 8 November 2026 and passed **147 Mave
 
 - `PATCH /api/demandes/{id}/accepter` accepts a pending request and marks its available animal `ADOPTE` in one transaction.
 - `PATCH /api/demandes/{id}/refuser` rejects a pending request without changing the animal's status.
+- After either decision is saved, the applicant is emailed the result when SMTP is configured. Mail problems never affect the decision. See [adoption decision emails](docs/adoption-email-notifications.md).
 - Decisions, animal edits and request deletion lock the animal first. Concurrent decisions cannot accept two requests for the same animal.
 - Ordinary animal creation or editing cannot manufacture an adoption or reopen an adopted animal. Metadata edits remain allowed when its status stays `ADOPTE`.
 - Accepted requests and adopted animals cannot be deleted through the API. Pending and rejected requests remain deletable.
@@ -156,6 +157,7 @@ All request/response JSON uses UTF-8. Protected requests send `Authorization: Be
 | `/api/animaux` | GET, POST | GET public; POST administrator |
 | `/api/animaux/{id}` | GET, PUT, DELETE | GET public; mutations administrator |
 | `/api/animaux/{id}/dossier-medical` | GET, POST, PUT | Administrator; automatically created with a new animal; POST repairs a missing legacy record, PUT edits it, standalone DELETE returns 405 |
+| `/api/animaux/{id}/image` | GET, PUT, DELETE | GET public; PUT and DELETE administrator. See [animal photos](docs/animal-photos.md) |
 | `/api/annonces` | GET, POST | GET public: PUBLIEE only; GET with valid bearer: all statuses; POST administrator |
 | `/api/annonces/{id}` | GET, PUT, DELETE | Public GET: PUBLIEE only, otherwise 404; valid bearer permits all statuses; mutations administrator |
 | `/api/demandes` | GET, POST | GET administrator; exact POST public with optional valid bearer attribution |

@@ -5,6 +5,7 @@ import com.enicarthage.refugeanimalier.model.DossierMedical;
 import com.google.gson.JsonObject;
 import com.enicarthage.refugeanimalier.model.Animal;
 import com.enicarthage.refugeanimalier.service.AnimalService;
+import com.enicarthage.refugeanimalier.service.ImageAnimalService;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParseException;
@@ -29,6 +30,15 @@ public class AnimalController implements HttpHandler {
     private final DossierMedicalService dossierMedicalService =
             new DossierMedicalService();
 
+    private final ImageAnimalService imageService;
+
+    public AnimalController() {
+        this(ImageAnimalService.parDefaut());
+    }
+
+    public AnimalController(ImageAnimalService imageService) {
+        this.imageService = imageService;
+    }
 
     public List<Animal> listerAnimaux() throws SQLException {
         return animalService.getAllAnimaux();
@@ -64,7 +74,8 @@ public class AnimalController implements HttpHandler {
             if (path.equals(BASE)) {
                 switch (method) {
                     case "GET" ->
-                            repondre(exchange, 200, animalService.rechercherAnimaux(QueryCatalogue.lire(exchange.getRequestURI())));
+                            repondre(exchange, 200, animalService.rechercherAnimaux(QueryCatalogue.lire(exchange.getRequestURI()))
+                                    .stream().map(this::jsonAnimal).toList());
 
                     case "POST" -> {
                         Animal animal = lireAnimal(exchange);
@@ -74,7 +85,7 @@ public class AnimalController implements HttpHandler {
                         animalService.ajouterAnimal(animal);
 
                         repondre(exchange, 201,
-                                Map.of("message", "Animal ajoute"));
+                                Map.of("message", "Animal ajoute", "id", animal.getId()));
                     }
 
                     default ->
@@ -84,6 +95,13 @@ public class AnimalController implements HttpHandler {
             }
 
 
+
+            // GET (public), PUT et DELETE (administrateur) /api/animaux/{id}/image
+            if (path.startsWith(BASE + "/") && path.endsWith("/image")
+                    && path.length() > (BASE + "/image").length()) {
+                traiterImage(exchange, path, method);
+                return;
+            }
 
             // GET /api/animaux/{id}/dossier-medical
 
@@ -210,7 +228,7 @@ public class AnimalController implements HttpHandler {
 
                 switch (method) {
                     case "GET" ->
-                            repondre(exchange, 200, existant);
+                            repondre(exchange, 200, jsonAnimal(existant));
 
                     case "PUT" -> {
                         Animal animal = lireAnimal(exchange);
@@ -228,6 +246,7 @@ public class AnimalController implements HttpHandler {
 
                     case "DELETE" -> {
                         animalService.supprimerAnimal(id);
+                        supprimerImageSansBloquer(id);
 
                         repondre(exchange, 200,
                                 Map.of(
@@ -263,6 +282,114 @@ public class AnimalController implements HttpHandler {
             e.printStackTrace();
             erreur(exchange, 500, "Erreur de base de donnees");
         }
+    }
+
+    private void traiterImage(HttpExchange exchange, String path, String method)
+            throws IOException, SQLException {
+        long animalId;
+        try {
+            animalId = Long.parseLong(path.substring(
+                    (BASE + "/").length(), path.length() - "/image".length()));
+            if (animalId <= 0) {
+                throw new NumberFormatException();
+            }
+        } catch (NumberFormatException e) {
+            erreur(exchange, 400, "ID animal invalide");
+            return;
+        }
+
+        if (method.equals("GET")) {
+            envoyerImage(exchange, animalId);
+            return;
+        }
+        if (!method.equals("PUT") && !method.equals("DELETE")) {
+            methodeNonAutorisee(exchange, "GET, PUT, DELETE");
+            return;
+        }
+
+        // Une image ne peut etre rattachee qu'a un animal existant.
+        animalService.getAnimalById(animalId);
+
+        String imageUrl = null;
+        try {
+            if (method.equals("PUT")) {
+                imageUrl = imageService.enregistrer(animalId, lireCorpsImage(exchange),
+                        exchange.getRequestHeaders().getFirst("Content-Type"));
+            } else {
+                imageService.supprimer(animalId);
+            }
+        } catch (ImageAnimalService.ImageRefuseeException e) {
+            erreur(exchange, e.statut(), e.getMessage());
+            return;
+        } catch (IOException e) {
+            System.err.println("Stockage de l'image impossible pour l'animal " + animalId
+                    + " (" + e.getClass().getSimpleName() + ")");
+            erreur(exchange, 500, "Erreur de stockage de l'image");
+            return;
+        }
+
+        if (method.equals("PUT")) {
+            repondre(exchange, 200, Map.of(
+                    "message", "Image enregistree", "id", animalId, "imageUrl", imageUrl));
+        } else {
+            repondre(exchange, 200, Map.of("message", "Image supprimee", "id", animalId));
+        }
+    }
+
+    private byte[] lireCorpsImage(HttpExchange exchange) throws IOException {
+        String longueur = exchange.getRequestHeaders().getFirst("Content-Length");
+        if (longueur != null && longueur.strip().matches("[0-9]{1,18}")
+                && Long.parseLong(longueur.strip()) > ImageAnimalService.TAILLE_MAX) {
+            throw ImageAnimalService.tropLourde();
+        }
+        byte[] contenu = exchange.getRequestBody().readNBytes(ImageAnimalService.TAILLE_MAX + 1);
+        if (contenu.length > ImageAnimalService.TAILLE_MAX) {
+            throw ImageAnimalService.tropLourde();
+        }
+        return contenu;
+    }
+
+    private void envoyerImage(HttpExchange exchange, long animalId) throws IOException {
+        ImageAnimalService.ImageAnimal image;
+        try {
+            image = imageService.lire(animalId);
+        } catch (IOException e) {
+            erreur(exchange, 500, "Erreur de lecture de l'image");
+            return;
+        }
+        if (image == null) {
+            erreur(exchange, 404, "Image introuvable");
+            return;
+        }
+        var headers = exchange.getResponseHeaders();
+        headers.set("Content-Type", image.typeContenu());
+        headers.set("Cache-Control", "public, max-age=86400");
+        headers.set("X-Content-Type-Options", "nosniff");
+        headers.set("Content-Security-Policy", "default-src 'none'; sandbox");
+        exchange.sendResponseHeaders(200, image.contenu().length);
+        try (OutputStream output = exchange.getResponseBody()) {
+            output.write(image.contenu());
+        }
+    }
+
+    // L'animal est deja supprime : un fichier restant ne doit pas transformer ce succes en erreur.
+    private void supprimerImageSansBloquer(long animalId) {
+        try {
+            imageService.supprimer(animalId);
+        } catch (IOException e) {
+            System.err.println("Image non supprimee pour l'animal " + animalId
+                    + " (" + e.getClass().getSimpleName() + ")");
+        }
+    }
+
+    // imageUrl n'est present que si une photo existe : les autres reponses restent identiques.
+    private JsonObject jsonAnimal(Animal animal) {
+        JsonObject json = gson.toJsonTree(animal).getAsJsonObject();
+        String imageUrl = imageService.urlImage(animal.getId());
+        if (imageUrl != null) {
+            json.addProperty("imageUrl", imageUrl);
+        }
+        return json;
     }
 
     private Animal lireAnimal(HttpExchange exchange) throws IOException {

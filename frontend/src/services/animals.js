@@ -40,7 +40,14 @@ function isAnimal(animal) {
   )
 }
 
+/** Accepts only this animal's own image route, so a stored value can never load another address. */
+export function animalImageUrl(animal) {
+  const url = animal?.imageUrl
+  return typeof url === 'string' && new RegExp(`^/api/animaux/${animal.id}/image(?:\\?v=\\d+)?$`).test(url) ? url : null
+}
+
 function publicAnimal(animal) {
+  const imageUrl = animalImageUrl(animal)
   return {
     id: animal.id,
     nom: animal.nom,
@@ -50,6 +57,7 @@ function publicAnimal(animal) {
     sexe: animal.sexe ?? null,
     etatSante: animal.etatSante ?? null,
     statut: animal.statut ?? null,
+    ...(imageUrl ? { imageUrl } : {}),
   }
 }
 

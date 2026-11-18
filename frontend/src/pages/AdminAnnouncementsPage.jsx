@@ -10,7 +10,7 @@ export default function AdminAnnouncementsPage() {
   const { session, expire } = useAdminSession()
   const [attempt, setAttempt] = useState(0)
   const [state, setState] = useState({ status: 'loading', announcements: [], animals: [] })
-  useEffect(() => { const previous = document.title; document.title = 'Gestion des annonces · Le Refuge'; return () => { document.title = previous } }, [])
+  useEffect(() => { const previous = document.title; document.title = 'Gestion des annonces · Pawtale'; return () => { document.title = previous } }, [])
   useEffect(() => {
     const controller = new AbortController()
     let current = true

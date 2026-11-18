@@ -89,6 +89,6 @@ function MedicalWorkspace({ animal, reload }) {
 
 export default function AdminMedicalPage() {
   const { id } = useParams()
-  useEffect(() => { const previous = document.title; document.title = 'Dossier médical · Le Refuge'; return () => { document.title = previous } }, [])
+  useEffect(() => { const previous = document.title; document.title = 'Dossier médical · Pawtale'; return () => { document.title = previous } }, [])
   return <section className="animal-editor medical-page"><AdminAnimalRecord key={id} id={id}>{(animal, reload) => <MedicalWorkspace animal={animal} reload={reload} />}</AdminAnimalRecord></section>
 }

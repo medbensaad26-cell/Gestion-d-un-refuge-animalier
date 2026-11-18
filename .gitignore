@@ -41,6 +41,9 @@ target/
 *dump*.sql
 refuge_animalier.sql
 
+# Photos uploaded through the application
+Backend/uploads/
+
 # Postman local files
 .postman/
 

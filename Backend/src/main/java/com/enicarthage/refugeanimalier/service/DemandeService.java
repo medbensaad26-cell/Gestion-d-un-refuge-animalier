@@ -2,19 +2,29 @@
 package com.enicarthage.refugeanimalier.service;
 
 import com.enicarthage.refugeanimalier.dao.DemandeDAO;
+import com.enicarthage.refugeanimalier.dto.DecisionAdoption;
 import com.enicarthage.refugeanimalier.exception.RessourceIntrouvableException;
 import com.enicarthage.refugeanimalier.model.Demande;
 import com.enicarthage.refugeanimalier.model.StatutDemande;
+import com.enicarthage.refugeanimalier.notification.NotificateurDecision;
+import com.enicarthage.refugeanimalier.notification.Notifications;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Objects;
 
 public class DemandeService {
 
     private final DemandeDAO demandeDAO;
+    private final NotificateurDecision notificateur;
 
     public DemandeService() {
-        this.demandeDAO = new DemandeDAO();
+        this(new DemandeDAO(), Notifications.parDefaut());
+    }
+
+    public DemandeService(DemandeDAO demandeDAO, NotificateurDecision notificateur) {
+        this.demandeDAO = Objects.requireNonNull(demandeDAO);
+        this.notificateur = Objects.requireNonNull(notificateur);
     }
 
     // Recuperer toutes les demandes
@@ -120,7 +130,15 @@ public class DemandeService {
         }
 
         // Executer la transaction dans DemandeDAO
-        demandeDAO.traiterDemande(id, statut, adminId);
+        DecisionAdoption decision = demandeDAO.traiterDemande(id, statut, adminId);
+
+        // La decision est validee : un probleme d'email ne doit plus la faire echouer.
+        try {
+            notificateur.notifier(decision);
+        } catch (RuntimeException e) {
+            System.err.println("Notification de decision impossible pour la demande " + id
+                    + " (" + e.getClass().getSimpleName() + ")");
+        }
     }
 
 

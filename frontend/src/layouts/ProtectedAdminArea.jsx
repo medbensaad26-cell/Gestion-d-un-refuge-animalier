@@ -3,6 +3,7 @@ import { Link, Navigate, NavLink, Outlet, useLocation } from 'react-router'
 import { useAdminSession } from '../context/AdminSessionContext.js'
 import { AdminSessionExpiredError, getAdminDashboard } from '../services/adminAuth.js'
 import PawIcon from '../components/PawIcon.jsx'
+import Icon from '../components/Icon.jsx'
 
 function AdminAccess({ session }) {
   const { signOut, expire } = useAdminSession()
@@ -32,16 +33,16 @@ function AdminAccess({ session }) {
   return <div className="admin-shell">
     <a className="skip-link" href="#admin-content">Aller au contenu</a>
     <header className="admin-header"><div className="container admin-header-content">
-      <Link className="brand" to="/admin"><span className="brand-icon"><PawIcon /></span><span>Le Refuge<span className="brand-caption">Espace administrateur</span></span></Link>
+      <Link className="brand" to="/admin"><span className="brand-icon"><PawIcon /></span><span>Pawtale<span className="brand-caption">Espace administrateur</span></span></Link>
       <div className="admin-header-actions"><Link to="/">Retour au site public ↗</Link><button type="button" className="button button-outline" onClick={signOut}>Se déconnecter</button></div>
     </div></header>
-    <nav className="admin-nav container" aria-label="Navigation administrateur"><NavLink to="/admin" end>Tableau de bord</NavLink><NavLink to="/admin/animaux">Animaux</NavLink><NavLink to="/admin/annonces">Annonces</NavLink><NavLink to="/admin/demandes">Demandes</NavLink></nav>
+    <nav className="admin-nav container" aria-label="Navigation administrateur"><p className="admin-nav-label">VOTRE ESPACE DE GESTION</p><NavLink to="/admin" end><Icon name="grid" />Tableau de bord</NavLink><NavLink to="/admin/animaux"><PawIcon />Animaux</NavLink><NavLink to="/admin/annonces"><Icon name="news" />Annonces</NavLink><NavLink to="/admin/demandes"><Icon name="mail" />Demandes</NavLink><div className="admin-sidebar-note"><Icon name="heart" /><p>Un peu d’attention.<br />De nouvelles histoires.</p></div></nav>
     <main id="admin-content" className="container admin-main" tabIndex={-1}>
       {state.status === 'loading' && <div className="feedback-panel" role="status"><span className="loading-spinner" aria-hidden="true" /><h1>Vérification de votre accès…</h1><p>Chargement du tableau de bord.</p></div>}
       {state.status === 'error' && <div className="feedback-panel" role="alert"><h1>Le tableau de bord se fait attendre.</h1><p>{state.message}</p><button className="button button-outline" type="button" onClick={refresh}>Réessayer</button></div>}
       {state.status === 'success' && <Outlet context={{ summary: state.summary, refresh }} />}
     </main>
-    <footer className="admin-footer container">Le Refuge · Espace de gestion</footer>
+    <footer className="admin-footer container">Pawtale · Espace de gestion</footer>
   </div>
 }
 

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
-import AnimalPortrait from '../components/AnimalPortrait.jsx'
+import ShelterPhoto from '../components/ShelterPhoto.jsx'
+import Icon from '../components/Icon.jsx'
 import PawIcon from '../components/PawIcon.jsx'
 import MatchingResultCard from '../components/MatchingResultCard.jsx'
 import { getMatchingRecommendations, hasMatchingPreferences, normalizeMatchingPreferences } from '../services/matching.js'
@@ -26,7 +27,7 @@ export default function MatchingPage() {
   useEffect(() => {
     active.current = true
     const original = document.title
-    document.title = 'Trouvez votre compagnon idéal · Le Refuge'
+    document.title = 'Trouvez votre compagnon idéal · Pawtale'
     return () => { active.current = false; request.current?.abort(); document.title = original }
   }, [])
 
@@ -77,24 +78,27 @@ export default function MatchingPage() {
   }
 
   const evaluated = hasMatchingPreferences(view.preferences)
+  const selectedCount = Object.values(preferences).filter(Boolean).length
   return <div className="matching-page">
     <section className="matching-intro container" aria-labelledby="matching-title">
       <nav className="detail-breadcrumb" aria-label="Fil d’Ariane"><Link to="/">Accueil</Link><span aria-hidden="true">/</span><span>Votre compagnon</span></nav>
       <div className="matching-intro-grid">
         <div><p className="eyebrow"><span />Une rencontre, à votre rythme</p><h1 id="matching-title">Trouvez votre<br /><span>compagnon idéal.</span></h1><p className="matching-lead">Quelques préférences pour vous orienter.<br />Et peut-être, le début d’une belle histoire.</p></div>
-        <div className="matching-intro-art" aria-hidden="true"><div className="matching-portrait matching-portrait-dog"><AnimalPortrait species="Chien" /></div><div className="matching-portrait matching-portrait-cat"><AnimalPortrait species="Chat" /></div><span>Une place pour chacun.<PawIcon /></span></div>
+        <div className="matching-intro-art"><div className="matching-portrait matching-portrait-dog"><ShelterPhoto name="puppy" priority sizes="240px" /></div><div className="matching-portrait matching-portrait-cat"><ShelterPhoto name="kittens" priority sizes="210px" /></div><span>Photos illustratives · De vraies rencontres à découvrir.<PawIcon /></span><div className="matching-art-heart" aria-hidden="true"><Icon name="heart" /></div></div>
       </div>
-      <p className="matching-method-label"><PawIcon />Un système de recommandation à règles explicites, à partir de vos préférences.</p>
+      <p className="matching-method-label"><Icon name="sparkle" />Vos préférences. Les animaux disponibles. Une première rencontre à imaginer.</p>
     </section>
 
     <section className="container matching-questionnaire" aria-labelledby="preferences-title">
-      <div className="matching-section-heading"><div><p className="eyebrow">Faisons connaissance</p><h2 id="preferences-title">Votre rencontre commence ici.</h2></div><p>3 questions, toutes facultatives.</p></div>
+      <div className="matching-section-heading"><div><p className="eyebrow">01 — VOS ENVIES, EN QUELQUES MOTS</p><h2 id="preferences-title">Votre rencontre commence ici.</h2></div><p>3 questions, toutes facultatives.</p></div>
+      <div className="matching-progress"><span>{selectedCount ? `${selectedCount} préférence${selectedCount > 1 ? 's' : ''} choisie${selectedCount > 1 ? 's' : ''}` : 'Toutes les rencontres restent possibles'}</span><div aria-hidden="true">{questions.map(question => <span className={preferences[question.key] ? 'is-selected' : ''} key={question.key} />)}</div></div>
       <form ref={form} onSubmit={event => { event.preventDefault(); search(preferences) }} noValidate>
         <div className="matching-questions">{questions.map((question, index) => <fieldset key={question.key} className="matching-question" aria-describedby={`matching-hint-${question.key}${invalidField === question.key ? ` matching-error-${question.key}` : ''}`}>
-          <legend><span className="matching-step" aria-hidden="true">0{index + 1}</span>{question.title}</legend>
+          <legend><span className="matching-step" aria-hidden="true">{preferences[question.key] ? <Icon name="check" /> : `0${index + 1}`}</span>{question.title}</legend>
           <p className="matching-question-hint" id={`matching-hint-${question.key}`}>{question.hint}</p>
           <div className="matching-options">{question.options.map(([value, label, hint]) => <label className="matching-choice" key={value}>
             <input type="radio" name={question.key} value={value} checked={preferences[question.key] === value} onChange={() => change(question.key, value)} aria-invalid={invalidField === question.key || undefined} />
+            {question.key === 'espece' && value && <span className="matching-choice-photo" aria-hidden="true"><ShelterPhoto name={value === 'Chien' ? 'puppy' : 'kittens'} sizes="110px" /></span>}
             <span>{label}{hint && <small>{hint}</small>}</span>
           </label>)}</div>
           {invalidField === question.key && <p className="matching-field-error" id={`matching-error-${question.key}`}>Choisissez une option proposée.</p>}
@@ -104,6 +108,7 @@ export default function MatchingPage() {
     </section>
 
     <section className="container matching-results" aria-labelledby="matching-results-title" aria-busy={busy}>
+      <p className="eyebrow">02 — LAISSEZ LA RENCONTRE SE DESSINER</p>
       <h2 id="matching-results-title" className="matching-results-heading" ref={feedback} tabIndex={-1}>{view.status === 'success' ? 'Vos compagnons à découvrir.' : 'Les rencontres se préparent.'}</h2>
       {view.status === 'idle' && <div className="matching-idle"><PawIcon /><p>Choisissez ce qui vous tient à cœur, ou gardez toutes les possibilités ouvertes. Vos recommandations apparaîtront ici.</p></div>}
       {busy && <div className="feedback-panel" role="status"><span className="loading-spinner" aria-hidden="true" /><h3>Nous cherchons vos compagnons…</h3><p>Vous pouvez modifier vos préférences pour annuler cette recherche.</p></div>}

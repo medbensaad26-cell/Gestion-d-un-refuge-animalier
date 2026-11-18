@@ -92,6 +92,6 @@ function RequestLoader({ id }) {
 
 export default function AdminRequestDetailPage() {
   const { id } = useParams()
-  useEffect(() => { const previous = document.title; document.title = 'Examiner une demande · Le Refuge'; return () => { document.title = previous } }, [])
+  useEffect(() => { const previous = document.title; document.title = 'Examiner une demande · Pawtale'; return () => { document.title = previous } }, [])
   return <section className="animal-editor request-detail"><Link className="admin-back-link" to="/admin/demandes">← Retour aux demandes</Link><p className="eyebrow">Accompagner les adoptions</p><h1 className="animal-editor-title">Examiner une demande</h1><RequestLoader key={id} id={id} /></section>
 }

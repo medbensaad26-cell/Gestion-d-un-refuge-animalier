@@ -27,8 +27,15 @@ public class DemandeController implements HttpHandler {
 
     private static final String BASE = "/api/demandes";
 
-    private final DemandeService demandeService =
-            new DemandeService();
+    private final DemandeService demandeService;
+
+    public DemandeController() {
+        this(new DemandeService());
+    }
+
+    public DemandeController(DemandeService demandeService) {
+        this.demandeService = demandeService;
+    }
 
     @Override
     public void handle(HttpExchange exchange)

@@ -2,6 +2,7 @@
 package com.enicarthage.refugeanimalier.dao;
 
 import com.enicarthage.refugeanimalier.config.DatabaseConnection;
+import com.enicarthage.refugeanimalier.dto.DecisionAdoption;
 import com.enicarthage.refugeanimalier.exception.RessourceIntrouvableException;
 import com.enicarthage.refugeanimalier.model.Demande;
 import com.enicarthage.refugeanimalier.model.StatutDemande;
@@ -205,7 +206,7 @@ public class DemandeDAO {
     }
 
     // La decision et l'identite de l'administrateur sont enregistrees ensemble.
-    public void traiterDemande(long id, StatutDemande decision, long adminId)
+    public DecisionAdoption traiterDemande(long id, StatutDemande decision, long adminId)
             throws SQLException {
         if (id <= 0) {
             throw new IllegalArgumentException("ID demande invalide");
@@ -254,10 +255,30 @@ public class DemandeDAO {
                         }
                     }
                 }
+                // Read before commit: a later read failure must not report a saved decision as failed.
+                DecisionAdoption resultat = lireDecision(connection, id, decision);
                 connection.commit();
+                return resultat;
             } catch (SQLException | RuntimeException e) {
                 annuler(connection, e);
                 throw e;
+            }
+        }
+    }
+
+    private DecisionAdoption lireDecision(Connection connection, long demandeId, StatutDemande decision)
+            throws SQLException {
+        // Both rows are already locked by this transaction; FOR UPDATE reads their current values.
+        try (PreparedStatement statement = connection.prepareStatement(
+                "SELECT d.nom_demandeur, d.email, a.nom FROM demande d " +
+                        "JOIN animal a ON a.id = d.animal_id WHERE d.id = ? FOR UPDATE")) {
+            statement.setLong(1, demandeId);
+            try (ResultSet rs = statement.executeQuery()) {
+                if (!rs.next()) {
+                    throw new RessourceIntrouvableException("Demande introuvable");
+                }
+                return new DecisionAdoption(demandeId, decision,
+                        rs.getString("nom_demandeur"), rs.getString("email"), rs.getString("nom"));
             }
         }
     }

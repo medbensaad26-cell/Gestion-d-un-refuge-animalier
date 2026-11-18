@@ -11,7 +11,7 @@ export default function AdminRequestsPage() {
   const [attempt, setAttempt] = useState(0)
   const [filter, setFilter] = useState('')
   const [state, setState] = useState({ status: 'loading', requests: [], animals: [] })
-  useEffect(() => { const previous = document.title; document.title = 'Demandes d’adoption · Le Refuge'; return () => { document.title = previous } }, [])
+  useEffect(() => { const previous = document.title; document.title = 'Demandes d’adoption · Pawtale'; return () => { document.title = previous } }, [])
   useEffect(() => {
     const controller = new AbortController()
     let current = true

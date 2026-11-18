@@ -89,6 +89,6 @@ function Editor({ id, animalId, creating }) {
 
 export default function AdminAnnouncementEditorPage({ creating = false }) {
   const { id, animalId } = useParams()
-  useEffect(() => { const previous = document.title; document.title = `${creating ? 'Créer une annonce' : 'Modifier une annonce'} · Le Refuge`; return () => { document.title = previous } }, [creating])
+  useEffect(() => { const previous = document.title; document.title = `${creating ? 'Créer une annonce' : 'Modifier une annonce'} · Pawtale`; return () => { document.title = previous } }, [creating])
   return <section className="animal-editor announcement-editor"><Link className="admin-back-link" to="/admin/annonces">← Retour aux annonces</Link><p className="eyebrow">Partager les nouvelles du refuge</p><h1 className="animal-editor-title">{creating ? 'Créer une annonce' : 'Modifier une annonce'}</h1><p className="animal-editor-intro">Présentez un animal et choisissez la visibilité de son annonce.</p><Editor key={`${id ?? 'new'}:${animalId ?? ''}`} id={id} animalId={animalId} creating={creating} /></section>
 }

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useSearchParams } from 'react-router'
 import AnnouncementsFeed from '../components/AnnouncementsFeed.jsx'
+import ShelterPhoto from '../components/ShelterPhoto.jsx'
 import { announcementQuery, filtersFromSearchParams, normalizeAnnouncementFilters } from '../services/announcements.js'
 
 function FiltersForm({ filters, onSearch }) {
@@ -36,7 +37,7 @@ export default function AnnouncementsPage() {
 
   useEffect(() => {
     const original = document.title
-    document.title = 'Les annonces · Le Refuge'
+    document.title = 'Les annonces · Pawtale'
     return () => { document.title = original }
   }, [])
 
@@ -45,9 +46,9 @@ export default function AnnouncementsPage() {
   }
 
   return <section className="announcements-page container" aria-labelledby="announcements-page-title">
-    <p className="eyebrow">Les nouvelles du refuge</p>
+    <div className="announcements-page-header"><div><p className="eyebrow">LE JOURNAL DES RENCONTRES</p>
     <h1 id="announcements-page-title">Une histoire à partager.</h1>
-    <p className="announcements-intro">Retrouvez les annonces d’adoption publiées par le refuge. Un nom vous parle ? Découvrez le profil de l’animal pour faire connaissance.</p>
+    <p className="announcements-intro">Retrouvez les annonces d’adoption publiées par le refuge. Un nom vous parle ? Découvrez le profil de l’animal pour faire connaissance.</p></div><div className="announcement-header-photo"><ShelterPhoto name="friends" priority /><span>Photo illustrative</span></div></div>
     {invalid ? <div className="feedback-panel" role="alert"><h2>Cette recherche n’est pas valide.</h2><p>Repartez de la liste des annonces pour choisir vos critères.</p><Link className="button button-primary" to="/annonces">Voir toutes les annonces</Link></div> : <>
       <FiltersForm key={location.key} filters={filters} onSearch={search} />
       <section className="announcement-results" aria-label="Résultats des annonces publiées"><AnnouncementsFeed key={location.key} filters={filters} /></section>

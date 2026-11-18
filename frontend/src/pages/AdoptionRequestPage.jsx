@@ -3,7 +3,8 @@ import { Link, useParams } from 'react-router'
 import { getAnimal, AnimalNotFoundError } from '../services/animals.js'
 import { submitAdoptionRequest, validateApplicant } from '../services/adoptionRequests.js'
 import { getAnimalStatus } from '../utils/animalLabels.js'
-import PawIcon from '../components/PawIcon.jsx'
+import AnimalPortrait from '../components/AnimalPortrait.jsx'
+import Icon from '../components/Icon.jsx'
 
 const emptyFields = { nomDemandeur: '', email: '', telephone: '' }
 
@@ -38,7 +39,7 @@ function AdoptionRequest({ id }) {
 
   useEffect(() => {
     const original = document.title
-    document.title = 'Demande d’adoption · Le Refuge'
+    document.title = 'Demande d’adoption · Pawtale'
     return () => { document.title = original }
   }, [])
 
@@ -101,14 +102,15 @@ function AdoptionRequest({ id }) {
     <nav className="detail-breadcrumb" aria-label="Fil d’Ariane"><Link to="/#animaux">Les animaux</Link><span aria-hidden="true">/</span>{animal && <><Link to={`/animaux/${animal.id}`}>{animal.nom}</Link><span aria-hidden="true">/</span></>}<span>Demande d’adoption</span></nav>
     <p className="eyebrow">Un premier pas vers une rencontre</p>
     <h1 id="adoption-title">{submission.phase === 'success' ? 'Votre demande est envoyée.' : 'Une nouvelle histoire commence.'}</h1>
+    <ol className="adoption-steps" aria-label="Parcours de la demande"><li className="is-complete"><Icon name="check" />Choisir une rencontre</li><li className={submission.phase === 'success' ? 'is-complete' : 'is-current'} aria-current={submission.phase === 'success' ? undefined : 'step'}><span>02</span>Vos coordonnées</li><li className={submission.phase === 'success' ? 'is-current' : ''} aria-current={submission.phase === 'success' ? 'step' : undefined}><span>03</span>Examen par le refuge</li></ol>
 
     {record.status === 'loading' && <div className="feedback-panel" role="status"><span className="loading-spinner" aria-hidden="true" /><h2>Vérification de l’animal…</h2><p>Nous préparons sa fiche.</p></div>}
     {record.status === 'error' && <div className="feedback-panel" role="alert"><h2>La fiche se fait attendre.</h2><p>Impossible de charger les informations de l’animal.</p><button type="button" className="button button-outline" onClick={reloadAvailability}>Réessayer</button></div>}
     {record.status === 'notFound' && <div className="feedback-panel" role="status"><h2>Cet animal est introuvable.</h2><p>Retrouvez les autres pensionnaires du refuge.</p><Link to="/#animaux" className="button button-primary">Retour aux animaux</Link></div>}
 
     {animal && record.status === 'success' && <>
-      <div className="adoption-animal"><span className="adoption-paw"><PawIcon /></span><div><p>Votre demande concerne</p><h2>{animal.nom}</h2><p>{animal.espece}{animal.race ? ` · ${animal.race}` : ''}</p></div><Link to={`/animaux/${animal.id}`}>Voir sa fiche ↗</Link></div>
-      {submission.phase === 'success' ? <div className="feedback-panel adoption-success" ref={feedback} tabIndex={-1} role="status"><h2>Merci pour votre intérêt pour {animal.nom}.</h2><p>{submission.message}</p><Link className="button button-primary" to={`/animaux/${animal.id}`}>Retour à sa fiche</Link><Link className="detail-return" to="/#animaux">Découvrir les autres animaux</Link></div>
+      <div className="adoption-animal"><span className="adoption-animal-photo"><AnimalPortrait species={animal.espece} variant={animal.id} imageUrl={animal.imageUrl} name={animal.nom} /></span><div><p>Votre demande concerne</p><h2>{animal.nom}</h2><p>{animal.espece}{animal.race ? ` · ${animal.race}` : ''}</p>{!animal.imageUrl && <small>Photographie illustrative</small>}</div><Link to={`/animaux/${animal.id}`}>Voir sa fiche ↗</Link></div>
+      {submission.phase === 'success' ? <div className="feedback-panel adoption-success" ref={feedback} tabIndex={-1} role="status"><span className="success-mark"><Icon name="check" /></span><h2>Merci pour votre intérêt pour {animal.nom}.</h2><p>{submission.message}</p><Link className="button button-primary" to={`/animaux/${animal.id}`}>Retour à sa fiche</Link><Link className="detail-return" to="/#animaux">Découvrir les autres animaux</Link></div>
         : animal.statut !== 'DISPONIBLE' ? <div className="feedback-panel" ref={feedback} tabIndex={-1} role="status"><h2>Les demandes ne sont pas ouvertes pour cet animal.</h2><p>{getAnimalStatus(animal.statut).message}</p><Link className="button button-outline" to={`/animaux/${animal.id}`}>Retour à sa fiche</Link></div>
           : <div className="adoption-form-panel">
             <h2 ref={formHeading} tabIndex={-1}>Vos coordonnées</h2>

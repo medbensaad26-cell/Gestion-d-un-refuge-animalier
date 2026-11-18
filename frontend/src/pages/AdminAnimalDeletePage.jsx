@@ -38,6 +38,6 @@ function DeleteConfirmation({ animal, reload }) {
 
 export default function AdminAnimalDeletePage() {
   const { id } = useParams()
-  useEffect(() => { const previous = document.title; document.title = 'Supprimer un animal · Le Refuge'; return () => { document.title = previous } }, [])
+  useEffect(() => { const previous = document.title; document.title = 'Supprimer un animal · Pawtale'; return () => { document.title = previous } }, [])
   return <section className="animal-editor"><AdminAnimalRecord key={id} id={id}>{(animal, reload) => <DeleteConfirmation animal={animal} reload={reload} />}</AdminAnimalRecord></section>
 }

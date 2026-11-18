@@ -1,0 +1,11 @@
+# Copy to email.local.properties and fill locally. Never commit that local file.
+# Environment variables REFUGE_MAIL_HOST / _PORT / _USER / _PASSWORD / _FROM / _SECURITY override these values.
+# Without mail.host, the application works normally and sends no email.
+mail.host=smtp.example.com
+mail.port=587
+mail.user=YOUR_SMTP_USER
+mail.password=
+mail.from=refuge@example.com
+
+# STARTTLS (default, port 587), SSL (port 465), or NONE (local test server without login only).
+mail.security=STARTTLS

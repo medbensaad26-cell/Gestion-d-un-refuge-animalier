@@ -29,7 +29,7 @@ function AnimalDetail({ id }) {
   }, [])
 
   useEffect(() => {
-    document.title = `${state.animal?.nom ?? 'Fiche de l’animal'} · Le Refuge`
+    document.title = `${state.animal?.nom ?? 'Fiche de l’animal'} · Pawtale`
     if (state.status !== 'loading') heading.current?.focus({ preventScroll: true })
   }, [state])
 
@@ -55,11 +55,11 @@ function AnimalDetail({ id }) {
 
       {animal && <div className="animal-detail-grid">
         <div className="detail-portrait-panel tone-1">
-          <div className="animal-card-visual"><AnimalPortrait species={animal.espece} /><span className="illustration-label">Illustration</span></div>
-          <p>Une rencontre commence par apprendre à se connaître.</p>
+          <div className="animal-card-visual"><AnimalPortrait species={animal.espece} variant={animal.id} imageUrl={animal.imageUrl} name={animal.nom} /></div>
+          <p>{animal.imageUrl ? `Photo de ${animal.nom} ajoutée par le refuge.` : `Photo illustrative, distincte de ${animal.nom}.`} Les informations de sa fiche sont celles du refuge.</p>
         </div>
         <div className="detail-profile">
-          <h2>Son profil</h2>
+          <p className="eyebrow">UNE PERSONNALITÉ À DÉCOUVRIR</p><h2>Son profil</h2>
           <dl className="detail-facts">
             <div><dt>Espèce</dt><dd>{animal.espece}</dd></div>
             <div><dt>Race</dt><dd>{animal.race?.trim() || 'Non renseignée'}</dd></div>
@@ -71,6 +71,7 @@ function AnimalDetail({ id }) {
           <p className="detail-status-note">{status.message}</p>
           {animal.statut === 'DISPONIBLE' && <Link className="button button-primary detail-adopt-link" to={`/animaux/${animal.id}/demande-adoption`}>Faire une demande d’adoption <span aria-hidden="true">↗</span></Link>}
           <Link className="button button-outline" to="/#animaux"><span aria-hidden="true">←</span> Retour aux animaux</Link>
+          <p className="profile-reassurance">Prenez le temps de faire connaissance. Une demande ne réserve pas l’animal : le refuge vous accompagne dans la suite du parcours.</p>
         </div>
       </div>}
     </section>

@@ -33,7 +33,7 @@ before(async () => {
       let data
       try { data = await readFile(target) } catch { data = await readFile(path.join(dist, 'index.html')) }
       const extension = path.extname(target)
-      res.writeHead(200, { 'Content-Type': ({ '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' })[extension] || 'text/html' })
+      res.writeHead(200, { 'Content-Type': ({ '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.webp': 'image/webp', '.woff2': 'font/woff2' })[extension] || 'text/html' })
       res.end(data)
     } catch { res.writeHead(500); res.end('Static test server error') }
   })
